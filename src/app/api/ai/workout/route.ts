@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { buildFallbackPlan, type AiRequest, type PlanInput } from "@/lib/plans";
 
+export const dynamic = "force-dynamic";
+
 const GEMINI_MODEL = "gemini-3.5-flash-lite";
 
 function extractJson(text: string): PlanInput | null {
