@@ -17,7 +17,16 @@ import { monthKey, monthLabel, prettyDate, prettyDateTime, todayStr, weekdayShor
 import { computeSubscription } from "@/lib/subscription";
 import { Avatar, Card, Chip, PageHead, Stat } from "@/components/ui";
 import { RevenueChart, SplitChart, WeeklyChart } from "@/components/charts";
-import { AddMemberForm, CoachAssigner, DismissBtn, RenewForm } from "./admin-client";
+import {
+  AddCoachForm,
+  AddMemberForm,
+  CoachAssigner,
+  CoachesManager,
+  DeleteUserBtn,
+  DismissBtn,
+  RenewForm,
+  ResetPasswordBtn,
+} from "./admin-client";
 
 export const dynamic = "force-dynamic";
 
@@ -100,6 +109,10 @@ export default async function AdminPage() {
   ].filter((d) => d.value > 0);
 
   const trainerOptions = trainers.map((t) => ({ id: t.id, name: t.name, specialty: t.specialty ?? "" }));
+  const studentCountByTrainer: Record<number, number> = {};
+  for (const a of assignments) {
+    studentCountByTrainer[a.trainerId] = (studentCountByTrainer[a.trainerId] ?? 0) + 1;
+  }
   const requests = inbox.filter((m) => m.body.includes("::"));
 
   return (
@@ -264,7 +277,11 @@ export default async function AdminPage() {
                     )}
                   </td>
                   <td className="py-3">
-                    <RenewForm memberId={r.user.id} />
+                    <div className="flex items-center gap-1.5">
+                      <RenewForm memberId={r.user.id} />
+                      <ResetPasswordBtn userId={r.user.id} userName={r.user.name} />
+                      <DeleteUserBtn userId={r.user.id} userName={r.user.name} />
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -273,20 +290,45 @@ export default async function AdminPage() {
         </div>
       </Card>
 
+      {/* Coaches Management Section */}
+      <div className="mt-4 grid gap-4 xl:grid-cols-3">
+        <Card className="xl:col-span-2">
+          <div className="mb-3 flex items-center justify-between">
+            <div>
+              <h3 className="font-display text-xl tracking-wide uppercase">
+                Coaches & Trainers Roster
+              </h3>
+              <p className="text-xs text-zinc-500">
+                Gym administration controls all trainer credentials and PT assignments.
+              </p>
+            </div>
+            <Chip tone="blue">{trainers.length} registered</Chip>
+          </div>
+          <CoachesManager trainers={trainers} studentCounts={studentCountByTrainer} />
+        </Card>
+
+        <Card>
+          <h3 className="font-display mb-1 text-xl tracking-wide uppercase">Add Coach</h3>
+          <p className="mb-4 text-xs text-zinc-500">
+            Provision a new trainer account with email, password, and specialty.
+          </p>
+          <AddCoachForm />
+        </Card>
+      </div>
+
       <div className="mt-4 grid gap-4 xl:grid-cols-3">
         {/* Add member */}
         <Card>
-          <h3 className="font-display mb-1 text-xl tracking-wide uppercase">Add member</h3>
+          <h3 className="font-display mb-1 text-xl tracking-wide uppercase">Add Member</h3>
           <p className="mb-4 text-xs text-zinc-500">
-            Creates login (temp password <code className="text-volt">member123</code>),
-            subscription and payment in one step.
+            Provision a new member account with email, password, plan, and initial payment.
           </p>
           <AddMemberForm />
         </Card>
 
         {/* Payments */}
         <Card className="xl:col-span-2">
-          <h3 className="font-display mb-3 text-xl tracking-wide uppercase">Recent payments</h3>
+          <h3 className="font-display mb-3 text-xl tracking-wide uppercase">Recent Payments</h3>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[520px] text-sm">
               <thead>

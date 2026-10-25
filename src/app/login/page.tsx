@@ -64,33 +64,16 @@ export default function LoginPage() {
 
           <div className="mt-6 flex items-center gap-2 text-xs text-zinc-500">
             <ShieldCheck size={14} className="text-volt" />
-            Sessions are encrypted and expire after 7 days.
+            Sessions are securely encrypted.
           </div>
 
-          <details className="group mt-8 rounded-xl border border-line bg-steel/60 text-xs text-zinc-500">
-            <summary className="cursor-pointer list-none px-4 py-3 font-semibold tracking-widest uppercase transition-colors group-open:text-zinc-300">
-              Demo credentials
-            </summary>
-            <div className="space-y-2 border-t border-line px-4 py-3 font-mono">
-              <p>
-                <span className="text-zinc-300">member@forge.com</span> / member123
-                <span className="ml-2 text-zinc-600">(member portal)</span>
-              </p>
-              <p>
-                <span className="text-zinc-300">coach@forge.com</span> / coach123
-                <span className="ml-2 text-zinc-600">(trainer portal)</span>
-              </p>
-              <p>
-                <span className="text-zinc-300">admin@forge.com</span> / admin123
-                <span className="ml-2 text-zinc-600">(control room)</span>
-              </p>
-            </div>
-          </details>
-
-          <p className="mt-8 text-xs text-zinc-600">
-            New here? Memberships are activated at the front desk or by club
-            management — your credentials arrive instantly.
-          </p>
+          <div className="mt-8 rounded-xl border border-line bg-steel/40 p-4 text-xs text-zinc-400">
+            <p className="font-semibold text-zinc-300">Restricted Access</p>
+            <p className="mt-1 leading-relaxed text-zinc-500">
+              Only authorized Members, Coaches, and Administrators can access the KC portal.
+              Member and Coach accounts are provisioned exclusively by KC Gym Administration.
+            </p>
+          </div>
         </div>
       </div>
     </div>

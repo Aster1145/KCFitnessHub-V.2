@@ -22,16 +22,25 @@ async function requireAdmin() {
 export async function addMemberAction(input: {
   name: string;
   email: string;
+  password?: string;
   plan: "normal" | "pt";
   durationDays: number;
   price: number;
   goal?: string;
 }) {
   await requireAdmin();
+  const name = input.name.trim();
   const email = input.email.trim().toLowerCase();
-  if (!input.name.trim() || !email) return { ok: false, error: "Name & email required" };
+  if (!name || !email) return { ok: false, error: "Name & email required" };
   if (!input.durationDays || input.durationDays < 1)
     return { ok: false, error: "Duration must be at least 1 day" };
+
+  const rawPassword = input.password?.trim() || "";
+  if (rawPassword && rawPassword.length < 6) {
+    return { ok: false, error: "Password must be at least 6 characters" };
+  }
+  // If no password entered, generate a clear secure password
+  const finalPassword = rawPassword || `KC${Math.floor(100000 + Math.random() * 900000)}`;
 
   const existing = await db.select().from(users).where(eq(users.email, email)).limit(1);
   if (existing.length) return { ok: false, error: "Email already registered" };
@@ -39,9 +48,9 @@ export async function addMemberAction(input: {
   const [member] = await db
     .insert(users)
     .values({
-      name: input.name.trim(),
+      name,
       email,
-      passwordHash: hashPassword("member123"),
+      passwordHash: hashPassword(finalPassword),
       role: "member",
       goal: input.goal ?? "recomp",
       level: "beginner",
@@ -66,7 +75,74 @@ export async function addMemberAction(input: {
   }
 
   revalidatePath("/admin");
-  return { ok: true, tempPassword: "member123" };
+  return { ok: true, password: finalPassword, email: member.email, name: member.name };
+}
+
+export async function addCoachAction(input: {
+  name: string;
+  email: string;
+  password?: string;
+  specialty?: string;
+}) {
+  await requireAdmin();
+  const name = input.name.trim();
+  const email = input.email.trim().toLowerCase();
+  const specialty = input.specialty?.trim() || "General Fitness & Conditioning";
+
+  if (!name || !email) return { ok: false, error: "Name & email are required" };
+
+  const rawPassword = input.password?.trim() || "";
+  if (rawPassword && rawPassword.length < 6) {
+    return { ok: false, error: "Password must be at least 6 characters" };
+  }
+  const finalPassword = rawPassword || `Coach@${Math.floor(1000 + Math.random() * 9000)}`;
+
+  const existing = await db.select().from(users).where(eq(users.email, email)).limit(1);
+  if (existing.length) return { ok: false, error: "Email already registered" };
+
+  const [coach] = await db
+    .insert(users)
+    .values({
+      name,
+      email,
+      passwordHash: hashPassword(finalPassword),
+      role: "trainer",
+      specialty,
+      avatarHue: Math.floor(Math.random() * 360),
+    })
+    .returning();
+
+  revalidatePath("/admin");
+  revalidatePath("/trainer");
+  return { ok: true, password: finalPassword, email: coach.email, name: coach.name };
+}
+
+export async function updateUserPasswordAction(userId: number, newPassword: string) {
+  await requireAdmin();
+  const pwd = newPassword.trim();
+  if (pwd.length < 6) {
+    return { ok: false, error: "Password must be at least 6 characters" };
+  }
+
+  await db
+    .update(users)
+    .set({ passwordHash: hashPassword(pwd) })
+    .where(eq(users.id, userId));
+
+  revalidatePath("/admin");
+  return { ok: true };
+}
+
+export async function deleteUserAction(userId: number) {
+  const admin = await requireAdmin();
+  if (admin.id === userId) {
+    return { ok: false, error: "Cannot delete your own admin account" };
+  }
+
+  await db.delete(users).where(eq(users.id, userId));
+  revalidatePath("/admin");
+  revalidatePath("/trainer");
+  return { ok: true };
 }
 
 /** Extend / upgrade an existing member — creates a new subscription + payment. */
