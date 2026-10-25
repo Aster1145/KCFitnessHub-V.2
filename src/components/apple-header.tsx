@@ -78,21 +78,20 @@ export function AppleHeader() {
 
         {/* Right Action: Member Access (Desktop) + Mobile Menu Toggle */}
         <div className="relative z-10 flex items-center gap-2 sm:gap-3">
-          {/* Member Access Button */}
+          {/* Portal Button */}
           <Link
             href="/login"
             className="group relative flex items-center gap-1.5 overflow-hidden rounded-full bg-volt px-4 py-2 sm:px-5 sm:py-2.5 text-[11px] sm:text-xs font-bold tracking-wider text-carbon uppercase shadow-[0_0_22px_rgba(216,255,62,0.4),inset_0_1px_1.5px_rgba(255,255,255,0.6)] transition-all duration-300 hover:bg-volt-dim hover:scale-105 hover:shadow-[0_0_30px_rgba(216,255,62,0.6)] active:scale-95"
           >
             {/* Gloss reflection shine on button */}
             <span className="pointer-events-none absolute inset-x-0 top-0 h-[1px] bg-white/60" />
-            <span className="relative z-10">
-              <span className="hidden min-[400px]:inline">Member </span>Access
-            </span>
+            <span className="relative z-10">Portal</span>
             <ArrowRight
               size={13}
               className="relative z-10 transition-transform duration-200 group-hover:translate-x-0.5"
             />
           </Link>
+
 
           {/* Mobile Hamburger Button */}
           <button
@@ -170,9 +169,10 @@ export function AppleHeader() {
                 onClick={() => setMobileMenuOpen(false)}
                 className="mt-4 flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl bg-volt py-3 text-xs font-bold tracking-wider text-carbon uppercase shadow-[0_0_20px_rgba(216,255,62,0.4)] transition-all hover:bg-volt-dim active:scale-95"
               >
-                <span>Access Member Portal</span>
+                <span>Enter Portal</span>
                 <ArrowRight size={14} />
               </Link>
+
             </div>
           </div>
         </>

@@ -47,8 +47,9 @@ export default function LoginPage() {
           </Link>
 
           <p className="text-[11px] font-semibold tracking-[0.3em] text-volt uppercase">
-            Member Access
+            Portal
           </p>
+
           <h2 className="font-display mt-2 text-4xl tracking-wide uppercase">
             Enter the club
           </h2>
