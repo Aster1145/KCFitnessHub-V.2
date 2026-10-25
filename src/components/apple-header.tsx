@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { ArrowRight, Menu, X, Sparkles, Clock, ExternalLink } from "lucide-react";
+import { ArrowRight, Menu, X, Sparkles, Clock, MapPin, ExternalLink } from "lucide-react";
 import { KcLogo, InstagramIcon } from "@/components/kc-logo";
 
 const NAV_LINKS = [
@@ -138,6 +138,16 @@ export function AppleHeader() {
 
               {/* Quick Info & Social */}
               <div className="mt-4 flex flex-col gap-2.5 border-t border-white/10 pt-4 text-[11px] text-zinc-400">
+                <a
+                  href="https://maps.app.goo.gl/VGuwWfWVLtorK6FY7"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 font-medium text-zinc-300 transition-colors hover:text-volt"
+                >
+                  <MapPin size={13} className="text-volt shrink-0" />
+                  <span className="truncate">Near Brigade Meadows, Kaggalipura (Google Maps)</span>
+                  <ExternalLink size={10} className="opacity-60 shrink-0" />
+                </a>
                 <div className="flex items-center gap-2">
                   <Clock size={13} className="text-volt shrink-0" />
                   <span className="truncate">Mon-Sat 5:30 AM – 10:00 PM | Sun 7 AM – 2 PM</span>

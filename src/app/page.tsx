@@ -775,15 +775,16 @@ export default function LandingPage() {
                   </p>
                 </div>
                 <a
-                  href="https://kcfitnesshub.com/contact"
+                  href="https://maps.app.goo.gl/VGuwWfWVLtorK6FY7"
                   target="_blank"
                   rel="noreferrer"
                   className="mt-6 inline-flex items-center gap-1.5 text-xs font-bold text-volt uppercase hover:underline"
                 >
-                  View on Map <ArrowUpRight size={13} />
+                  View on Google Maps <ArrowUpRight size={13} />
                 </a>
               </div>
             </Reveal>
+
 
             <Reveal delay={0.1}>
               <div className="flex h-full flex-col justify-between rounded-2xl border border-line bg-steel p-6">
@@ -870,10 +871,16 @@ export default function LandingPage() {
                 Transform your life with our world-class facilities and expert trainers.
               </p>
               <div className="pt-2">
-                <span className="inline-block rounded-full border border-volt/30 bg-volt/10 px-3 py-1 text-[10px] font-semibold tracking-widest text-volt uppercase">
-                  Bengaluru · Kaggalipura
-                </span>
+                <a
+                  href="https://maps.app.goo.gl/VGuwWfWVLtorK6FY7"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-volt/30 bg-volt/10 px-3 py-1 text-[10px] font-semibold tracking-widest text-volt uppercase transition-colors hover:bg-volt hover:text-carbon"
+                >
+                  <MapPin size={11} /> Bengaluru · Kaggalipura
+                </a>
               </div>
+
             </div>
 
             {/* Column 2: Quick Links */}
