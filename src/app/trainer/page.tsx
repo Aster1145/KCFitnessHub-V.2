@@ -36,8 +36,10 @@ export default async function TrainerPage() {
       const sub = membership ? computeSubscription(membership, dates, today) : null;
       return {
         id: s.id,
+        code: s.code,
         name: s.name,
         email: s.email,
+        phone: s.phone,
         goal: s.goal ?? "recomp",
         level: s.level ?? "beginner",
         hue: s.avatarHue,
@@ -84,7 +86,7 @@ export default async function TrainerPage() {
       <PageHead
         eyebrow="Trainer Portal"
         title={`Coach ${trainer.name.split(" ")[0]}`}
-        sub="Manage every student from here — programs, diets and messages. No calls needed."
+        sub={`Coach ID: ${trainer.code || "KCC0001"} · ${trainer.specialty || "Fitness Specialist"}${trainer.phone ? ` · 📞 ${trainer.phone}` : ""}`}
       />
 
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">

@@ -10,18 +10,24 @@ import {
   Banknote,
   Calendar,
   Check,
+  CheckCircle2,
   ChevronDown,
+  Clock,
   Copy,
   CreditCard,
   Dumbbell,
+  ExternalLink,
   Eye,
   Flame,
   KeyRound,
   LoaderCircle,
   Mail,
+  MessageCircle,
+  Phone,
   QrCode,
   RotateCcw,
   Search,
+  Send,
   Sparkles,
   Target,
   Trash2,
@@ -29,13 +35,16 @@ import {
   UserPlus,
   Users,
   X,
+  Zap,
 } from "lucide-react";
 import {
   addCoachAction,
   addMemberAction,
+  approvePendingMemberAction,
   assignCoachAction,
   deleteUserAction,
   dismissMessageAction,
+  rejectPendingMemberAction,
   renewMembershipAction,
   updateUserPasswordAction,
 } from "@/actions/admin";
@@ -50,6 +59,7 @@ export type MemberRowData = {
     code: string | null;
     name: string;
     email: string;
+    phone?: string | null;
     avatarHue: number;
     goal?: string | null;
     level?: string | null;
@@ -88,6 +98,7 @@ export type CoachDetailData = {
   code: string | null;
   name: string;
   email: string;
+  phone?: string | null;
   specialty: string | null;
   avatarHue: number;
   createdAt?: string | null;
@@ -97,6 +108,7 @@ export type CoachDetailData = {
     code: string | null;
     name: string;
     email: string;
+    phone?: string | null;
     avatarHue: number;
     plan: string;
     remaining: number;
@@ -395,6 +407,7 @@ export function AddMemberForm() {
       const res = await addMemberAction({
         name: String(fd.get("name") ?? ""),
         email: String(fd.get("email") ?? ""),
+        phone: String(fd.get("phone") ?? ""),
         password: String(fd.get("password") ?? ""),
         plan: presets[planType].plan,
         durationDays: duration,
@@ -440,6 +453,12 @@ export function AddMemberForm() {
         required
         type="email"
         placeholder="Member Email (or login ID)"
+        className={inputCls}
+      />
+      <input
+        name="phone"
+        type="tel"
+        placeholder="Phone Number (e.g. +91 98450 12345)"
         className={inputCls}
       />
       <div>
@@ -610,6 +629,7 @@ export function AddCoachForm() {
       const res = await addCoachAction({
         name: String(fd.get("name") ?? ""),
         email: String(fd.get("email") ?? ""),
+        phone: String(fd.get("phone") ?? ""),
         password: String(fd.get("password") ?? ""),
         specialty: String(fd.get("specialty") ?? ""),
       });
@@ -650,6 +670,12 @@ export function AddCoachForm() {
         required
         type="email"
         placeholder="Coach Email (or login ID)"
+        className={inputCls}
+      />
+      <input
+        name="phone"
+        type="tel"
+        placeholder="Phone Number (e.g. +91 98450 12345)"
         className={inputCls}
       />
       <div>
@@ -1251,6 +1277,27 @@ export function MemberDetailModal({
                   {member.user.email}
                 </a>
               </span>
+              {member.user.phone ? (
+                <>
+                  <span>•</span>
+                  <span className="flex items-center gap-1.5">
+                    <Phone size={12} className="text-volt" />
+                    <a href={`tel:${member.user.phone}`} className="font-mono text-zinc-300 hover:text-volt">
+                      {member.user.phone}
+                    </a>
+                    <a
+                      href={`https://wa.me/${member.user.phone.replace(/[^0-9]/g, "")}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 rounded bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-400 hover:bg-emerald-500/20 transition-colors"
+                      title="Chat on WhatsApp"
+                    >
+                      <MessageCircle size={10} />
+                      WhatsApp
+                    </a>
+                  </span>
+                </>
+              ) : null}
               <span>•</span>
               <span className="flex items-center gap-1">
                 <Calendar size={12} className="text-zinc-500" />
@@ -1485,6 +1532,27 @@ export function CoachDetailModal({
                   {coach.email}
                 </a>
               </span>
+              {coach.phone ? (
+                <>
+                  <span>•</span>
+                  <span className="flex items-center gap-1.5">
+                    <Phone size={12} className="text-sky-400" />
+                    <a href={`tel:${coach.phone}`} className="font-mono text-zinc-300 hover:text-sky-300">
+                      {coach.phone}
+                    </a>
+                    <a
+                      href={`https://wa.me/${coach.phone.replace(/[^0-9]/g, "")}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 rounded bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-400 hover:bg-emerald-500/20 transition-colors"
+                      title="Chat on WhatsApp"
+                    >
+                      <MessageCircle size={10} />
+                      WhatsApp
+                    </a>
+                  </span>
+                </>
+              ) : null}
               <span>•</span>
               <span className="flex items-center gap-1">
                 <Calendar size={12} className="text-zinc-500" />
@@ -2137,3 +2205,657 @@ export function RevenueManager({
     </div>
   );
 }
+
+// -------------------------------------------------------------
+// PENDING MEMBERS MANAGER (New Joins & Payment Activation Hub)
+// -------------------------------------------------------------
+export type PendingMemberRow = {
+  id: number;
+  name: string;
+  email: string;
+  phone: string;
+  plan: string;
+  durationDays: number;
+  goal: string | null;
+  level: string | null;
+  authProvider: string | null;
+  status: "pending" | "approved" | "rejected";
+  notes: string | null;
+  createdAt: string;
+  approvedAt?: string | null;
+};
+
+export function PendingMembersManager({
+  initialApplications,
+  trainers,
+}: {
+  initialApplications: PendingMemberRow[];
+  trainers: { id: number; name: string; specialty: string }[];
+}) {
+  const router = useRouter();
+  const [tab, setTab] = useState<"pending" | "approved" | "all">("pending");
+  const [search, setSearch] = useState("");
+  const [activeModalMember, setActiveModalMember] = useState<PendingMemberRow | null>(null);
+
+  // Activation Form State inside Modal
+  const [actPlan, setActPlan] = useState<"normal" | "pt">("normal");
+  const [actDays, setActDays] = useState(90);
+  const [actPrice, setActPrice] = useState(6500);
+  const [actMethod, setActMethod] = useState<"UPI" | "Cash" | "Card">("UPI");
+  const [actCoachId, setActCoachId] = useState<number | undefined>(undefined);
+  const [actPassword, setActPassword] = useState("");
+  const [actSendEmail, setActSendEmail] = useState(true);
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [modalError, setModalError] = useState("");
+  const [activationSuccess, setActivationSuccess] = useState<{
+    code: string;
+    password: string;
+    email: string;
+    phone: string;
+    name: string;
+    emailSent: boolean;
+  } | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  // Pre-fill form when activating an applicant
+  const openActivationModal = (m: PendingMemberRow) => {
+    setActiveModalMember(m);
+    setActivationSuccess(null);
+    setModalError("");
+    setActPlan(m.plan === "pt" ? "pt" : "normal");
+    setActDays(m.durationDays || 30);
+    // calculate default price
+    const defaultPrices: Record<number, number> = {
+      30: m.plan === "pt" ? 8000 : 2500,
+      90: 6500,
+      180: 11000,
+      365: 19000,
+    };
+    setActPrice(defaultPrices[m.durationDays] || 2500);
+    setActMethod("UPI");
+    setActCoachId(undefined);
+    setActPassword(`KC${Math.floor(100000 + Math.random() * 900000)}`);
+    setActSendEmail(true);
+  };
+
+  const handleConfirmActivation = async () => {
+    if (!activeModalMember) return;
+    setIsSubmitting(true);
+    setModalError("");
+
+    try {
+      const res = await approvePendingMemberAction({
+        pendingId: activeModalMember.id,
+        plan: actPlan,
+        durationDays: actDays,
+        price: actPrice,
+        paymentMethod: actMethod,
+        coachId: actCoachId,
+        password: actPassword,
+        sendEmail: actSendEmail,
+      });
+
+      if (!res.ok) {
+        setModalError(res.error || "Failed to activate member");
+        setIsSubmitting(false);
+        return;
+      }
+
+      setActivationSuccess({
+        code: res.code || "KCM....",
+        password: res.password || actPassword,
+        email: res.email || activeModalMember.email,
+        phone: res.phone || activeModalMember.phone,
+        name: res.name || activeModalMember.name,
+        emailSent: res.emailSent || false,
+      });
+      router.refresh();
+    } catch (err: unknown) {
+      setModalError(err instanceof Error ? err.message : "Activation error");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleReject = async (id: number) => {
+    if (!confirm("Are you sure you want to reject this registration application?")) return;
+    await rejectPendingMemberAction(id);
+    router.refresh();
+  };
+
+  const copyCreds = () => {
+    if (!activationSuccess) return;
+    const text = `Welcome to KC Fitness Hub!\n\nMember ID: ${activationSuccess.code}\nRegistered Email: ${activationSuccess.email}\nPassword: ${activationSuccess.password}\n\nLogin: ${window.location.origin}/login`;
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const filtered = useMemo(() => {
+    return initialApplications.filter((m) => {
+      const q = search.trim().toLowerCase();
+      const matchesSearch =
+        !q ||
+        m.name.toLowerCase().includes(q) ||
+        m.email.toLowerCase().includes(q) ||
+        m.phone.toLowerCase().includes(q);
+
+      if (!matchesSearch) return false;
+
+      if (tab === "pending") return m.status === "pending";
+      if (tab === "approved") return m.status === "approved";
+      return true;
+    });
+  }, [initialApplications, search, tab]);
+
+  const pendingCount = useMemo(
+    () => initialApplications.filter((m) => m.status === "pending").length,
+    [initialApplications]
+  );
+  const approvedCount = useMemo(
+    () => initialApplications.filter((m) => m.status === "approved").length,
+    [initialApplications]
+  );
+
+  return (
+    <div className="space-y-6">
+      {/* Top Banner & KPI Pills */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h2 className="font-display text-2xl font-bold uppercase tracking-wider text-white">
+            Pending Member Onboarding
+          </h2>
+          <p className="text-xs text-zinc-400 mt-0.5">
+            Incoming registrations via website (Google Auth & Manual). Collect payment, approve, and send auto welcome credentials.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 font-mono text-xs font-bold text-amber-300">
+            <Clock size={13} /> {pendingCount} Awaiting Payment
+          </span>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 font-mono text-xs font-bold text-emerald-300">
+            <CheckCircle2 size={13} /> {approvedCount} Activated
+          </span>
+        </div>
+      </div>
+
+      {/* Search and Tabs */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="relative flex-1 max-w-md">
+          <Search
+            size={15}
+            className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500"
+          />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by name, email, or phone number…"
+            className="w-full rounded-xl border border-line bg-carbon py-2.5 pl-10 pr-9 text-xs text-zinc-100 placeholder:text-zinc-600 focus:border-volt focus:outline-none focus:ring-1 focus:ring-volt/40"
+          />
+          {search ? (
+            <button
+              onClick={() => setSearch("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300"
+            >
+              <X size={13} />
+            </button>
+          ) : null}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-1.5 text-xs">
+          <button
+            onClick={() => setTab("pending")}
+            className={`rounded-lg px-3 py-1.5 font-bold transition-colors ${
+              tab === "pending"
+                ? "bg-amber-400 text-carbon"
+                : "border border-line bg-smoke/40 text-zinc-400 hover:text-zinc-200"
+            }`}
+          >
+            Pending Payment ({pendingCount})
+          </button>
+          <button
+            onClick={() => setTab("approved")}
+            className={`rounded-lg px-3 py-1.5 font-medium transition-colors ${
+              tab === "approved"
+                ? "bg-emerald-500 text-carbon font-bold"
+                : "border border-line bg-smoke/40 text-zinc-400 hover:text-zinc-200"
+            }`}
+          >
+            Approved ({approvedCount})
+          </button>
+          <button
+            onClick={() => setTab("all")}
+            className={`rounded-lg px-3 py-1.5 font-medium transition-colors ${
+              tab === "all"
+                ? "bg-zinc-200 text-carbon font-bold"
+                : "border border-line bg-smoke/40 text-zinc-400 hover:text-zinc-200"
+            }`}
+          >
+            All ({initialApplications.length})
+          </button>
+        </div>
+      </div>
+
+      {/* Applications Table */}
+      <div className="overflow-x-auto rounded-2xl border border-line bg-smoke/40">
+        <table className="w-full min-w-[850px] text-sm">
+          <thead>
+            <tr className="border-b border-line text-left text-[10px] font-semibold tracking-[0.2em] text-zinc-500 uppercase bg-carbon/50">
+              <th className="py-3 pl-4 pr-3">Applicant</th>
+              <th className="py-3 pr-4">Contact</th>
+              <th className="py-3 pr-4">Requested Plan</th>
+              <th className="py-3 pr-4">Fitness Goal</th>
+              <th className="py-3 pr-4">Applied</th>
+              <th className="py-3 pr-4">Status</th>
+              <th className="py-3 pr-4 text-right">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map((m) => (
+              <tr key={m.id} className="border-b border-line/60 align-middle hover:bg-smoke/70 transition-colors">
+                {/* Applicant Name & Provider */}
+                <td className="py-3 pl-4 pr-3">
+                  <div className="flex items-center gap-2.5">
+                    <Avatar name={m.name} hue={m.authProvider === "google" ? 210 : 80} size={34} />
+                    <div>
+                      <p className="font-semibold text-zinc-100 flex items-center gap-1.5">
+                        {m.name}
+                        {m.authProvider === "google" ? (
+                          <span
+                            className="inline-flex items-center gap-1 rounded bg-blue-500/10 px-1.5 py-0.5 text-[9px] font-bold text-blue-400 border border-blue-500/20"
+                            title="Verified Google Account"
+                          >
+                            Google
+                          </span>
+                        ) : (
+                          <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-[9px] font-medium text-zinc-400">
+                            Manual
+                          </span>
+                        )}
+                      </p>
+                      <p className="text-[11px] text-zinc-500">App #{m.id}</p>
+                    </div>
+                  </div>
+                </td>
+
+                {/* Contact: Email & Phone */}
+                <td className="py-3 pr-4 text-xs">
+                  <p className="text-zinc-300 font-mono text-[11px]">{m.email}</p>
+                  <div className="mt-1 flex items-center gap-2">
+                    <a
+                      href={`tel:${m.phone}`}
+                      className="font-mono text-xs font-semibold text-volt hover:underline flex items-center gap-1"
+                    >
+                      <Phone size={10} />
+                      {m.phone}
+                    </a>
+                    <a
+                      href={`https://wa.me/${m.phone.replace(/[^0-9]/g, "")}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="rounded bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-bold text-emerald-400 hover:bg-emerald-500/20"
+                      title="Chat on WhatsApp"
+                    >
+                      WhatsApp
+                    </a>
+                  </div>
+                </td>
+
+                {/* Requested Plan */}
+                <td className="py-3 pr-4">
+                  <div className="flex items-center gap-1.5">
+                    <Chip tone={m.plan === "pt" ? "blue" : "volt"}>
+                      {m.durationDays}d {m.plan === "pt" ? "PT" : "General"}
+                    </Chip>
+                  </div>
+                  {m.notes ? (
+                    <p className="mt-1 text-[11px] text-zinc-400 italic line-clamp-1 max-w-xs">
+                      &quot;{m.notes}&quot;
+                    </p>
+                  ) : null}
+                </td>
+
+                {/* Fitness Goal & Level */}
+                <td className="py-3 pr-4 text-xs">
+                  <span className="capitalize font-medium text-zinc-200">
+                    {m.goal || "Recomposition"}
+                  </span>
+                  <p className="text-[10px] text-zinc-500 capitalize">{m.level || "Beginner"}</p>
+                </td>
+
+                {/* Applied Date */}
+                <td className="py-3 pr-4 text-xs text-zinc-400 font-mono">
+                  {m.createdAt}
+                </td>
+
+                {/* Status */}
+                <td className="py-3 pr-4">
+                  {m.status === "pending" ? (
+                    <span className="inline-flex items-center gap-1 rounded-md border border-amber-500/30 bg-amber-500/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-300">
+                      <Clock size={11} /> Awaiting Payment
+                    </span>
+                  ) : m.status === "approved" ? (
+                    <span className="inline-flex items-center gap-1 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-300">
+                      <CheckCircle2 size={11} /> Activated
+                    </span>
+                  ) : (
+                    <span className="rounded-md border border-zinc-700 bg-zinc-800 px-2.5 py-0.5 text-[10px] font-bold uppercase text-zinc-400">
+                      Rejected
+                    </span>
+                  )}
+                </td>
+
+                {/* Action */}
+                <td className="py-3 pr-4 text-right">
+                  {m.status === "pending" ? (
+                    <div className="flex items-center justify-end gap-1.5">
+                      <button
+                        onClick={() => openActivationModal(m)}
+                        className="inline-flex items-center gap-1.5 rounded-xl bg-volt px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-carbon hover:bg-volt-dim transition-all shadow-[0_0_15px_rgba(204,255,0,0.25)] active:scale-95"
+                      >
+                        <Zap size={13} />
+                        Approve & Activate
+                      </button>
+                      <button
+                        onClick={() => handleReject(m.id)}
+                        className="rounded-lg p-1.5 text-zinc-500 hover:text-red-400 hover:bg-smoke"
+                        title="Reject application"
+                      >
+                        <X size={15} />
+                      </button>
+                    </div>
+                  ) : (
+                    <span className="text-[11px] text-zinc-500 font-mono">
+                      Completed
+                    </span>
+                  )}
+                </td>
+              </tr>
+            ))}
+
+            {filtered.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="py-14 text-center text-xs text-zinc-500">
+                  No applications found in this category.
+                </td>
+              </tr>
+            ) : null}
+          </tbody>
+        </table>
+      </div>
+
+      {/* ---------------- ACTIVATION & PAYMENT MODAL ---------------- */}
+      {activeModalMember && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md"
+          onClick={() => setActiveModalMember(null)}
+        >
+          <div
+            className="relative max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-3xl border border-volt/30 bg-smoke p-6 shadow-2xl shadow-black/90"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close button */}
+            <button
+              onClick={() => setActiveModalMember(null)}
+              className="absolute right-4 top-4 rounded-lg border border-line bg-carbon p-1.5 text-zinc-400 hover:text-zinc-100"
+            >
+              <X size={16} />
+            </button>
+
+            {!activationSuccess ? (
+              <div>
+                <div className="flex items-center gap-3 border-b border-line pb-4 mb-5">
+                  <div className="grid size-11 place-items-center rounded-2xl bg-volt/20 border border-volt/30 text-volt">
+                    <Zap size={22} />
+                  </div>
+                  <div>
+                    <h3 className="font-display text-xl font-bold uppercase tracking-wide text-white">
+                      Confirm Payment & Activate
+                    </h3>
+                    <p className="text-xs text-zinc-400">
+                      {activeModalMember.name} · {activeModalMember.phone}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-4 text-xs">
+                  {/* Plan & Duration */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase text-zinc-400 mb-1">
+                        Membership Plan
+                      </label>
+                      <select
+                        value={actPlan}
+                        onChange={(e) => {
+                          const p = e.target.value as "normal" | "pt";
+                          setActPlan(p);
+                          if (p === "pt") setActPrice(8000);
+                          else setActPrice(actDays === 30 ? 2500 : actDays === 90 ? 6500 : 11000);
+                        }}
+                        className={inputCls}
+                      >
+                        <option value="normal">General Fitness</option>
+                        <option value="pt">Personal Training (PT)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase text-zinc-400 mb-1">
+                        Attended Days Promised
+                      </label>
+                      <select
+                        value={actDays}
+                        onChange={(e) => {
+                          const d = Number(e.target.value);
+                          setActDays(d);
+                          if (actPlan === "pt") setActPrice(8000);
+                          else {
+                            if (d === 30) setActPrice(2500);
+                            else if (d === 90) setActPrice(6500);
+                            else if (d === 180) setActPrice(11000);
+                            else if (d === 365) setActPrice(19000);
+                          }
+                        }}
+                        className={inputCls}
+                      >
+                        <option value={30}>30 Days (1 Month)</option>
+                        <option value={90}>90 Days (3 Months)</option>
+                        <option value={180}>180 Days (6 Months)</option>
+                        <option value={365}>365 Days (1 Year)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Price & Payment Method */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase text-zinc-400 mb-1">
+                        Payment Collected (₹ INR) *
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={actPrice}
+                        onChange={(e) => setActPrice(Number(e.target.value))}
+                        className={inputCls}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase text-zinc-400 mb-1">
+                        Payment Method *
+                      </label>
+                      <select
+                        value={actMethod}
+                        onChange={(e) => setActMethod(e.target.value as "UPI" | "Cash" | "Card")}
+                        className={inputCls}
+                      >
+                        <option value="UPI">UPI / GPay / PhonePe</option>
+                        <option value="Cash">Cash at Desk</option>
+                        <option value="Card">Card Swipe / POS</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Assign Coach (Optional) */}
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase text-zinc-400 mb-1">
+                      Assigned Coach (Optional)
+                    </label>
+                    <select
+                      value={actCoachId ?? ""}
+                      onChange={(e) => setActCoachId(e.target.value ? Number(e.target.value) : undefined)}
+                      className={inputCls}
+                    >
+                      <option value="">No dedicated coach (Gym Floor Trainer)</option>
+                      {trainers.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.name} ({t.specialty})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Auto-generated Password */}
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase text-zinc-400 mb-1">
+                      Initial Login Password
+                    </label>
+                    <input
+                      type="text"
+                      value={actPassword}
+                      onChange={(e) => setActPassword(e.target.value)}
+                      className={inputCls}
+                    />
+                    <p className="mt-1 text-[11px] text-zinc-500">
+                      User ID (e.g. KCM0004) will be generated automatically and emailed along with this password.
+                    </p>
+                  </div>
+
+                  {/* Checkbox: Auto Welcome Email */}
+                  <label className="flex items-center gap-2.5 rounded-xl border border-line bg-carbon/50 p-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={actSendEmail}
+                      onChange={(e) => setActSendEmail(e.target.checked)}
+                      className="size-4 accent-volt rounded"
+                    />
+                    <div>
+                      <span className="font-semibold text-zinc-200">
+                        Auto-dispatch welcome email with User ID & password
+                      </span>
+                      <p className="text-[11px] text-zinc-500">
+                        Sends a branded credentials email to {activeModalMember.email}.
+                      </p>
+                    </div>
+                  </label>
+
+                  {modalError && (
+                    <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-red-400">
+                      {modalError}
+                    </div>
+                  )}
+
+                  <button
+                    onClick={handleConfirmActivation}
+                    disabled={isSubmitting}
+                    className="w-full flex items-center justify-center gap-2 rounded-2xl bg-volt py-3.5 text-xs font-extrabold uppercase tracking-wider text-carbon hover:bg-volt-dim transition-all shadow-[0_0_20px_rgba(204,255,0,0.3)] disabled:opacity-50"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <LoaderCircle size={15} className="animate-spin" />
+                        Activating & Sending Email...
+                      </>
+                    ) : (
+                      <>
+                        <Check size={16} strokeWidth={3} />
+                        Confirm ₹{actPrice.toLocaleString("en-IN")} Payment & Activate
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              /* Success Celebration State */
+              <div className="text-center py-4 space-y-5">
+                <div className="mx-auto grid size-16 place-items-center rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 shadow-[0_0_30px_rgba(16,185,129,0.3)]">
+                  <CheckCircle2 size={36} />
+                </div>
+
+                <div>
+                  <span className="rounded-full bg-emerald-500/10 border border-emerald-500/30 px-3 py-1 font-mono text-xs font-bold text-emerald-400 uppercase">
+                    Member Activated Successfully
+                  </span>
+                  <h3 className="font-display text-2xl font-black uppercase text-white mt-2">
+                    {activationSuccess.name}
+                  </h3>
+                  <p className="text-xs text-zinc-400">
+                    Account created and payment logged into KC Fitness Hub ledger.
+                  </p>
+                </div>
+
+                {/* Generated Credentials Card */}
+                <div className="rounded-2xl border border-line bg-carbon p-4 text-left text-xs space-y-2.5">
+                  <div className="flex justify-between items-center py-1 border-b border-line/60">
+                    <span className="text-zinc-500 font-semibold uppercase text-[10px]">Official Member ID</span>
+                    <span className="font-mono text-sm font-bold text-volt">{activationSuccess.code}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-1 border-b border-line/60">
+                    <span className="text-zinc-500 font-semibold uppercase text-[10px]">Registered Email</span>
+                    <span className="font-mono text-zinc-200">{activationSuccess.email}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-1 border-b border-line/60">
+                    <span className="text-zinc-500 font-semibold uppercase text-[10px]">Initial Password</span>
+                    <span className="font-mono font-bold text-white bg-smoke px-2 py-0.5 rounded">{activationSuccess.password}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-1">
+                    <span className="text-zinc-500 font-semibold uppercase text-[10px]">Welcome Email</span>
+                    <span className="font-semibold text-emerald-400 flex items-center gap-1">
+                      <Mail size={12} />
+                      {activationSuccess.emailSent ? "Dispatched to Inbox" : "Rendered & Logged"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Action buttons */}
+                <div className="flex flex-col sm:flex-row gap-2.5">
+                  <button
+                    onClick={copyCreds}
+                    className="flex-1 flex items-center justify-center gap-1.5 rounded-xl border border-line bg-smoke py-2.5 text-xs font-bold text-zinc-200 hover:text-white hover:bg-smoke/80"
+                  >
+                    {copied ? <Check size={14} className="text-volt" /> : <Copy size={14} />}
+                    {copied ? "Copied to Clipboard" : "Copy Credentials"}
+                  </button>
+
+                  <a
+                    href={`https://wa.me/${activationSuccess.phone.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(
+                      `Welcome to KC Fitness Hub, ${activationSuccess.name}!\n\nYour membership is active!\nMember ID: ${activationSuccess.code}\nPassword: ${activationSuccess.password}\nLogin: ${window.location.origin}/login\n\nSee you on the gym floor!`
+                    )}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-emerald-500 py-2.5 text-xs font-bold uppercase text-black hover:bg-emerald-400"
+                  >
+                    <MessageCircle size={14} />
+                    Send via WhatsApp
+                  </a>
+                </div>
+
+                <button
+                  onClick={() => setActiveModalMember(null)}
+                  className="w-full text-xs text-zinc-400 hover:text-zinc-200 py-1"
+                >
+                  Done & Close
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+

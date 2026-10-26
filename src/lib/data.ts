@@ -12,6 +12,7 @@ import {
   users,
   workoutDays,
   workoutPlans,
+  pendingMembers,
   type DietAssignment,
   type DietLog,
   type Message,
@@ -20,6 +21,7 @@ import {
   type WorkoutDay,
   type WorkoutPlan,
   type Membership,
+  type PendingMember,
 } from "@/db/schema";
 import { monthKey, todayStr } from "./dates";
 
@@ -263,3 +265,20 @@ export async function attendanceLast7(): Promise<{ date: string; count: number }
   }
   return out;
 }
+
+// ---------- Pending Member Registrations ----------
+export async function getPendingMembers(): Promise<PendingMember[]> {
+  return db
+    .select()
+    .from(pendingMembers)
+    .where(eq(pendingMembers.status, "pending"))
+    .orderBy(desc(pendingMembers.createdAt));
+}
+
+export async function getAllPendingMembers(): Promise<PendingMember[]> {
+  return db
+    .select()
+    .from(pendingMembers)
+    .orderBy(desc(pendingMembers.createdAt));
+}
+

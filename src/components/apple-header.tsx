@@ -77,19 +77,26 @@ export function AppleHeader() {
         </nav>
 
         {/* Right Action: Member Access (Desktop) + Mobile Menu Toggle */}
-        <div className="relative z-10 flex items-center gap-2 sm:gap-3">
-          {/* Portal Button */}
+        <div className="relative z-10 flex items-center gap-2 sm:gap-2.5">
+          {/* Join Online Button */}
           <Link
-            href="/login"
-            className="group relative flex items-center gap-1.5 overflow-hidden rounded-full bg-volt px-4 py-2 sm:px-5 sm:py-2.5 text-[11px] sm:text-xs font-bold tracking-wider text-carbon uppercase shadow-[0_0_22px_rgba(216,255,62,0.4),inset_0_1px_1.5px_rgba(255,255,255,0.6)] transition-all duration-300 hover:bg-volt-dim hover:scale-105 hover:shadow-[0_0_30px_rgba(216,255,62,0.6)] active:scale-95"
+            href="/join"
+            className="group relative flex items-center gap-1.5 overflow-hidden rounded-full bg-volt px-3.5 py-1.5 sm:px-4 sm:py-2 text-[11px] sm:text-xs font-black tracking-wider text-carbon uppercase shadow-[0_0_22px_rgba(216,255,62,0.4)] transition-all duration-300 hover:bg-volt-dim hover:scale-105 active:scale-95"
           >
-            {/* Gloss reflection shine on button */}
             <span className="pointer-events-none absolute inset-x-0 top-0 h-[1px] bg-white/60" />
-            <span className="relative z-10">Portal</span>
+            <span className="relative z-10">Join Now</span>
             <ArrowRight
-              size={13}
+              size={12}
               className="relative z-10 transition-transform duration-200 group-hover:translate-x-0.5"
             />
+          </Link>
+
+          {/* Member Portal Button */}
+          <Link
+            href="/login"
+            className="flex items-center gap-1 rounded-full border border-white/20 bg-white/5 px-3 py-1.5 sm:px-3.5 sm:py-2 text-[11px] sm:text-xs font-bold tracking-wider text-zinc-300 uppercase hover:text-white hover:border-white/40 transition-colors"
+          >
+            Sign In
           </Link>
 
 

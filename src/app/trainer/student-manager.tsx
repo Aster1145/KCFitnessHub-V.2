@@ -12,6 +12,7 @@ import {
   UserRound,
   Plus,
   Trash2,
+  Phone,
 } from "lucide-react";
 import {
   assignDietAction,
@@ -24,8 +25,10 @@ import type { PlanInput } from "@/lib/plans";
 
 export interface StudentVM {
   id: number;
+  code?: string | null;
   name: string;
   email: string;
+  phone?: string | null;
   goal: string;
   level: string;
   hue: number;
@@ -295,12 +298,22 @@ export default function StudentManager({ students }: { students: StudentVM[] }) 
               <div className="min-w-0 flex-1">
                 <p className="flex flex-wrap items-center gap-2 font-semibold text-zinc-100">
                   {s.name}
+                  {s.code ? (
+                    <span className="font-mono text-[10px] text-volt bg-volt/10 border border-volt/20 px-1.5 py-0.5 rounded">
+                      {s.code}
+                    </span>
+                  ) : null}
                   <span
                     className={`size-1.5 rounded-full ${s.checkedToday ? "bg-volt" : "bg-zinc-700"}`}
                     title={s.checkedToday ? "In gym today" : "Not checked in today"}
                   />
                 </p>
                 <p className="truncate text-xs text-zinc-500">
+                  {s.phone ? (
+                    <span className="font-mono text-zinc-300 font-medium mr-1.5">
+                      {s.phone} ·
+                    </span>
+                  ) : null}
                   {s.goal.toUpperCase()} · {s.level} · last check-in{" "}
                   {s.lastCheckIn ?? "never"}
                 </p>
@@ -350,7 +363,36 @@ export default function StudentManager({ students }: { students: StudentVM[] }) 
                 </div>
 
                 {tab === "overview" ? (
-                  <div className="grid gap-4 sm:grid-cols-3">
+                  <div className="grid gap-4 sm:grid-cols-4">
+                    <div className="rounded-xl border border-line bg-carbon p-4">
+                      <p className="text-[10px] font-semibold tracking-widest text-zinc-500 uppercase">
+                        Member Contact
+                      </p>
+                      <p className="mt-2 text-xs font-mono text-zinc-300 truncate">
+                        {s.email}
+                      </p>
+                      {s.phone ? (
+                        <div className="mt-2 flex items-center gap-2">
+                          <a
+                            href={`tel:${s.phone}`}
+                            className="font-mono text-xs font-semibold text-volt hover:underline flex items-center gap-1"
+                          >
+                            <Phone size={10} /> {s.phone}
+                          </a>
+                          <a
+                            href={`https://wa.me/${s.phone.replace(/[^0-9]/g, "")}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="rounded bg-emerald-500/10 px-1.5 py-0.5 text-[9px] font-bold text-emerald-400 hover:bg-emerald-500/20"
+                          >
+                            WhatsApp
+                          </a>
+                        </div>
+                      ) : (
+                        <p className="mt-1 text-xs text-zinc-500">No phone on file</p>
+                      )}
+                    </div>
+
                     <div className="rounded-xl border border-line bg-carbon p-4">
                       <p className="text-[10px] font-semibold tracking-widest text-zinc-500 uppercase">
                         Current program

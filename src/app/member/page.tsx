@@ -51,7 +51,7 @@ export default async function MemberDashboard() {
   return (
     <div>
       <PageHead
-        eyebrow={prettyDate(today)}
+        eyebrow={`${prettyDate(today)} · Member ID: ${user.code || "KCM0001"}${user.phone ? ` · 📞 ${user.phone}` : ""}`}
         title={`Hey, ${user.name.split(" ")[0]}`}
         sub="Only the days you train count against your plan. Miss a day and your end date moves — automatically."
         right={

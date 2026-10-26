@@ -1,17 +1,21 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { db } from "@/db";
 import {
   coachAssignments,
+  coaches,
+  members,
   memberships,
   messages,
   payments,
+  pendingMembers,
   users,
 } from "@/db/schema";
 import { getSessionUser, hashPassword } from "@/lib/auth";
-import { todayStr } from "@/lib/dates";
+import { prettyDate, todayStr } from "@/lib/dates";
+import { sendWelcomeEmail } from "@/lib/email";
 
 async function requireAdmin() {
   const user = await getSessionUser();
@@ -19,7 +23,7 @@ async function requireAdmin() {
   return user;
 }
 
-async function getNextUserCode(role: "member" | "trainer" | "admin"): Promise<string> {
+export async function getNextUserCode(role: "member" | "trainer" | "admin"): Promise<string> {
   const prefix = role === "member" ? "KCM" : role === "trainer" ? "KCC" : "KCA";
   const rows = await db
     .select({ code: users.code })
@@ -41,16 +45,19 @@ async function getNextUserCode(role: "member" | "trainer" | "admin"): Promise<st
 export async function addMemberAction(input: {
   name: string;
   email: string;
+  phone?: string;
   password?: string;
   plan: "normal" | "pt";
   durationDays: number;
   price: number;
   paymentMethod?: "UPI" | "Cash" | "Card";
   goal?: string;
+  coachId?: number;
 }) {
   await requireAdmin();
   const name = input.name.trim();
   const email = input.email.trim().toLowerCase();
+  const phone = input.phone?.trim() || null;
   if (!name || !email) return { ok: false, error: "Name & email required" };
   if (!input.durationDays || input.durationDays < 1)
     return { ok: false, error: "Duration must be at least 1 day" };
@@ -73,6 +80,7 @@ export async function addMemberAction(input: {
       code,
       name,
       email,
+      phone,
       passwordHash: hashPassword(finalPassword),
       role: "member",
       goal: input.goal ?? "recomp",
@@ -80,6 +88,22 @@ export async function addMemberAction(input: {
       avatarHue: Math.floor(Math.random() * 360),
     })
     .returning();
+
+  // Also sync to members table
+  try {
+    await db.insert(members).values({
+      userId: member.id,
+      code,
+      name,
+      email,
+      phone,
+      goal: input.goal ?? "recomp",
+      level: "beginner",
+      avatarHue: member.avatarHue,
+    });
+  } catch (err) {
+    console.error("Failed to sync members table:", err);
+  }
 
   await db.insert(memberships).values({
     userId: member.id,
@@ -98,19 +122,55 @@ export async function addMemberAction(input: {
     });
   }
 
+  if (input.coachId) {
+    await db.insert(coachAssignments).values({
+      memberId: member.id,
+      trainerId: input.coachId,
+    });
+  }
+
+  // Auto welcome email
+  let emailSent = false;
+  try {
+    const emailRes = await sendWelcomeEmail({
+      toEmail: member.email,
+      toName: member.name,
+      memberCode: code,
+      password: finalPassword,
+      planName: `${input.durationDays} Days (${input.plan === "pt" ? "Personal Training" : "General Fitness"})`,
+      startDate: prettyDate(new Date()),
+      phone: member.phone,
+    });
+    emailSent = emailRes.success;
+  } catch (err) {
+    console.error("Failed to dispatch welcome email:", err);
+  }
+
   revalidatePath("/admin");
-  return { ok: true, code, password: finalPassword, email: member.email, name: member.name };
+  revalidatePath("/admin/members");
+  revalidatePath("/admin/revenue");
+  return {
+    ok: true,
+    code,
+    password: finalPassword,
+    email: member.email,
+    name: member.name,
+    phone: member.phone,
+    emailSent,
+  };
 }
 
 export async function addCoachAction(input: {
   name: string;
   email: string;
+  phone?: string;
   password?: string;
   specialty?: string;
 }) {
   await requireAdmin();
   const name = input.name.trim();
   const email = input.email.trim().toLowerCase();
+  const phone = input.phone?.trim() || null;
   const specialty = input.specialty?.trim() || "General Fitness & Conditioning";
 
   if (!name || !email) return { ok: false, error: "Name & email are required" };
@@ -132,6 +192,7 @@ export async function addCoachAction(input: {
       code,
       name,
       email,
+      phone,
       passwordHash: hashPassword(finalPassword),
       role: "trainer",
       specialty,
@@ -139,9 +200,265 @@ export async function addCoachAction(input: {
     })
     .returning();
 
+  // Also sync to coaches table
+  try {
+    await db.insert(coaches).values({
+      userId: coach.id,
+      code,
+      name,
+      email,
+      phone,
+      specialty,
+      avatarHue: coach.avatarHue,
+    });
+  } catch (err) {
+    console.error("Failed to sync coaches table:", err);
+  }
+
   revalidatePath("/admin");
+  revalidatePath("/admin/coaches");
   revalidatePath("/trainer");
-  return { ok: true, code, password: finalPassword, email: coach.email, name: coach.name };
+  return {
+    ok: true,
+    code,
+    password: finalPassword,
+    email: coach.email,
+    name: coach.name,
+    phone: coach.phone,
+  };
+}
+
+// ---------- Public Join Application (Manual or Google Auth) ----------
+export async function submitJoinApplicationAction(input: {
+  name: string;
+  email: string;
+  phone: string;
+  plan?: string; // "normal" | "pt"
+  durationDays?: number;
+  goal?: string;
+  level?: string;
+  authProvider?: string; // "google" | "manual"
+  notes?: string;
+}) {
+  const name = input.name.trim();
+  const email = input.email.trim().toLowerCase();
+  const phone = input.phone.trim();
+
+  if (!name || !email || !phone) {
+    return { ok: false, error: "Name, email, and phone number are required." };
+  }
+
+  // Check if email already has active account
+  const existingUser = await db.select().from(users).where(eq(users.email, email)).limit(1);
+  if (existingUser.length) {
+    return {
+      ok: false,
+      error: "An account with this email already exists! Please log in at /login.",
+    };
+  }
+
+  // Check if already in pending list
+  const existingPending = await db
+    .select()
+    .from(pendingMembers)
+    .where(eq(pendingMembers.email, email))
+    .limit(1);
+
+  if (existingPending.length && existingPending[0].status === "pending") {
+    return {
+      ok: true,
+      pendingId: existingPending[0].id,
+      alreadySubmitted: true,
+      message: "You have an existing pending application with this email! KC Fitness Hub admin will activate it upon payment.",
+    };
+  }
+
+  const [row] = await db
+    .insert(pendingMembers)
+    .values({
+      name,
+      email,
+      phone,
+      plan: input.plan || "normal",
+      durationDays: input.durationDays || 30,
+      goal: input.goal || "recomp",
+      level: input.level || "beginner",
+      authProvider: input.authProvider || "manual",
+      status: "pending",
+      notes: input.notes?.trim() || null,
+    })
+    .returning();
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/pending");
+  revalidatePath("/admin/members");
+  return { ok: true, pendingId: row.id };
+}
+
+// ---------- Approve & Activate Pending Member ----------
+export async function approvePendingMemberAction(input: {
+  pendingId: number;
+  plan: "normal" | "pt";
+  durationDays: number;
+  price: number;
+  paymentMethod: "UPI" | "Cash" | "Card";
+  coachId?: number;
+  password?: string;
+  sendEmail?: boolean;
+}) {
+  await requireAdmin();
+
+  const [pending] = await db
+    .select()
+    .from(pendingMembers)
+    .where(eq(pendingMembers.id, input.pendingId))
+    .limit(1);
+
+  if (!pending) {
+    return { ok: false, error: "Pending application not found." };
+  }
+  if (pending.status === "approved") {
+    return { ok: false, error: "This application has already been approved." };
+  }
+
+  // Check if email was registered in the meantime
+  const existing = await db
+    .select()
+    .from(users)
+    .where(eq(users.email, pending.email.toLowerCase()))
+    .limit(1);
+
+  if (existing.length) {
+    return { ok: false, error: `Email ${pending.email} is already registered.` };
+  }
+
+  const rawPassword = input.password?.trim() || "";
+  const finalPassword = rawPassword || `KC${Math.floor(100000 + Math.random() * 900000)}`;
+  const code = await getNextUserCode("member");
+
+  // 1. Create User
+  const [newMember] = await db
+    .insert(users)
+    .values({
+      code,
+      name: pending.name,
+      email: pending.email.toLowerCase(),
+      phone: pending.phone,
+      passwordHash: hashPassword(finalPassword),
+      role: "member",
+      goal: pending.goal || "recomp",
+      level: pending.level || "beginner",
+      avatarHue: Math.floor(Math.random() * 360),
+    })
+    .returning();
+
+  // 2. Sync to members table
+  try {
+    await db.insert(members).values({
+      userId: newMember.id,
+      code,
+      name: newMember.name,
+      email: newMember.email,
+      phone: newMember.phone,
+      goal: newMember.goal,
+      level: newMember.level,
+      avatarHue: newMember.avatarHue,
+    });
+  } catch (err) {
+    console.error("Failed to sync members table:", err);
+  }
+
+  // 3. Create Membership
+  await db.insert(memberships).values({
+    userId: newMember.id,
+    plan: input.plan,
+    durationDays: Math.max(1, input.durationDays),
+    startDate: todayStr(),
+    pricePaid: Math.max(0, Math.round(input.price || 0)),
+  });
+
+  // 4. Create Payment record
+  if (input.price > 0) {
+    await db.insert(payments).values({
+      userId: newMember.id,
+      amount: Math.round(input.price),
+      plan: input.plan,
+      method: input.paymentMethod || "UPI",
+    });
+  }
+
+  // 5. Optional Coach assignment
+  let coachName: string | null = null;
+  if (input.coachId) {
+    await db.insert(coachAssignments).values({
+      memberId: newMember.id,
+      trainerId: input.coachId,
+    });
+    const [c] = await db
+      .select({ name: users.name })
+      .from(users)
+      .where(eq(users.id, input.coachId))
+      .limit(1);
+    if (c) coachName = c.name;
+  }
+
+  // 6. Update pending status
+  await db
+    .update(pendingMembers)
+    .set({
+      status: "approved",
+      approvedAt: new Date(),
+      approvedUserId: newMember.id,
+    })
+    .where(eq(pendingMembers.id, pending.id));
+
+  // 7. Auto welcome email dispatch
+  let emailSent = false;
+  if (input.sendEmail !== false) {
+    try {
+      const emailRes = await sendWelcomeEmail({
+        toEmail: newMember.email,
+        toName: newMember.name,
+        memberCode: code,
+        password: finalPassword,
+        planName: `${input.durationDays} Days (${input.plan === "pt" ? "Personal Training" : "General Fitness"})`,
+        startDate: prettyDate(new Date()),
+        phone: newMember.phone,
+        coachName,
+      });
+      emailSent = emailRes.success;
+    } catch (err) {
+      console.error("Auto welcome email failed:", err);
+    }
+  }
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/members");
+  revalidatePath("/admin/pending");
+  revalidatePath("/admin/revenue");
+
+  return {
+    ok: true,
+    code,
+    password: finalPassword,
+    email: newMember.email,
+    phone: newMember.phone,
+    name: newMember.name,
+    emailSent,
+  };
+}
+
+export async function rejectPendingMemberAction(pendingId: number) {
+  await requireAdmin();
+  await db
+    .update(pendingMembers)
+    .set({ status: "rejected" })
+    .where(eq(pendingMembers.id, pendingId));
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/pending");
+  revalidatePath("/admin/members");
+  return { ok: true };
 }
 
 export async function updateUserPasswordAction(userId: number, newPassword: string) {
@@ -172,7 +489,6 @@ export async function deleteUserAction(userId: number) {
   return { ok: true };
 }
 
-/** Extend / upgrade an existing member — creates a new subscription + payment. */
 export async function renewMembershipAction(
   memberId: number,
   plan: "normal" | "pt",
@@ -199,6 +515,8 @@ export async function renewMembershipAction(
       });
   }
   revalidatePath("/admin");
+  revalidatePath("/admin/renewals");
+  revalidatePath("/admin/revenue");
   return { ok: true };
 }
 

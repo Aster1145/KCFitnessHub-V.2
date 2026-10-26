@@ -15,6 +15,7 @@ export const users = pgTable("users", {
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
+  phone: text("phone"),
   role: text("role", { enum: ["admin", "member", "trainer"] })
     .notNull()
     .default("member"),
@@ -34,6 +35,7 @@ export const members = pgTable("members", {
   code: text("code").notNull().unique(),
   name: text("name").notNull(),
   email: text("email").notNull(),
+  phone: text("phone"),
   goal: text("goal"),
   level: text("level"),
   avatarHue: integer("avatar_hue").default(80),
@@ -49,6 +51,7 @@ export const coaches = pgTable("coaches", {
   code: text("code").notNull().unique(),
   name: text("name").notNull(),
   email: text("email").notNull(),
+  phone: text("phone"),
   specialty: text("specialty"),
   avatarHue: integer("avatar_hue").default(80),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -198,6 +201,25 @@ export const messages = pgTable("messages", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const pendingMembers = pgTable("pending_members", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  email: text("email").notNull(),
+  phone: text("phone").notNull(),
+  plan: text("plan").notNull().default("normal"),
+  durationDays: integer("duration_days").notNull().default(30),
+  goal: text("goal"),
+  level: text("level").default("beginner"),
+  authProvider: text("auth_provider").default("manual"),
+  status: text("status", { enum: ["pending", "approved", "rejected"] })
+    .notNull()
+    .default("pending"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  approvedAt: timestamp("approved_at"),
+  approvedUserId: integer("approved_user_id").references(() => users.id, { onDelete: "set null" }),
+});
+
 export type User = typeof users.$inferSelect;
 export type Member = typeof members.$inferSelect;
 export type Coach = typeof coaches.$inferSelect;
@@ -208,3 +230,4 @@ export type PlanExercise = typeof planExercises.$inferSelect;
 export type DietLog = typeof dietLogs.$inferSelect;
 export type DietAssignment = typeof dietAssignments.$inferSelect;
 export type Message = typeof messages.$inferSelect;
+export type PendingMember = typeof pendingMembers.$inferSelect;

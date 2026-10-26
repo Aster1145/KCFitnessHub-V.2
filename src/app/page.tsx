@@ -131,7 +131,7 @@ export default function LandingPage() {
             </HeroItem>
             <HeroItem className="mt-8 flex flex-col sm:flex-row items-stretch sm:items-center gap-3.5 w-full sm:w-auto">
               <Link
-                href="/login"
+                href="/join"
                 className="rounded-full bg-volt px-8 py-3.5 text-center text-sm font-bold text-carbon uppercase tracking-widest transition-all hover:scale-[1.02] hover:bg-volt-dim shadow-[0_0_24px_rgba(216,255,62,0.35)]"
               >
                 Start Training
@@ -361,7 +361,7 @@ export default function LandingPage() {
                 </div>
                 <div className="mt-8 pt-4">
                   <Link
-                    href="/login"
+                    href="/join"
                     className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/5 py-3.5 text-xs font-bold tracking-widest text-zinc-100 uppercase transition-all hover:bg-volt hover:text-carbon hover:border-volt"
                   >
                     Get Started <ArrowRight size={14} />
@@ -408,7 +408,7 @@ export default function LandingPage() {
                 </div>
                 <div className="mt-8 pt-4">
                   <Link
-                    href="/login"
+                    href="/join"
                     className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/5 py-3.5 text-xs font-bold tracking-widest text-zinc-100 uppercase transition-all hover:bg-volt hover:text-carbon hover:border-volt"
                   >
                     Get Started <ArrowRight size={14} />
@@ -453,7 +453,7 @@ export default function LandingPage() {
                 </div>
                 <div className="mt-8 pt-4">
                   <Link
-                    href="/login"
+                    href="/join"
                     className="flex w-full items-center justify-center gap-2 rounded-xl bg-volt py-3.5 text-xs font-bold tracking-widest text-carbon uppercase transition-all hover:bg-volt-dim hover:scale-[1.02]"
                   >
                     Get Started <ArrowRight size={14} />
@@ -500,7 +500,7 @@ export default function LandingPage() {
                 </div>
                 <div className="mt-8 pt-4">
                   <Link
-                    href="/login"
+                    href="/join"
                     className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/5 py-3.5 text-xs font-bold tracking-widest text-zinc-100 uppercase transition-all hover:bg-volt hover:text-carbon hover:border-volt"
                   >
                     Get Started <ArrowRight size={14} />
@@ -526,7 +526,7 @@ export default function LandingPage() {
                   </p>
                 </div>
                 <Link
-                  href="/login"
+                  href="/join"
                   className="inline-flex items-center gap-2 shrink-0 rounded-xl border border-sky-400/40 bg-sky-400/10 px-6 py-3.5 text-xs font-bold tracking-widest text-sky-300 uppercase transition-colors hover:bg-sky-400 hover:text-carbon"
                 >
                   Explore Coaching <ArrowUpRight size={15} />

@@ -63,6 +63,7 @@ export default async function MembersPage() {
         code: u.code,
         name: u.name,
         email: u.email,
+        phone: u.phone,
         avatarHue: u.avatarHue,
         goal: u.goal,
         level: u.level,

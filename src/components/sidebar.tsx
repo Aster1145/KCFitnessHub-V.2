@@ -15,6 +15,7 @@ import {
   UserPlus,
   RotateCcw,
   CreditCard,
+  UserCheck,
   type LucideIcon,
 } from "lucide-react";
 import { logoutAction } from "@/actions/auth";
@@ -28,6 +29,7 @@ const ICONS: Record<string, LucideIcon> = {
   coach: Handshake,
   students: Users,
   stats: BarChart3,
+  pending: UserCheck,
   members: Users,
   coaches: Award,
   add: UserPlus,

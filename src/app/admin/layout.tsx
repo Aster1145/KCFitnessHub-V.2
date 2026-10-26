@@ -13,6 +13,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
         hue={user.avatarHue}
         links={[
           { href: "/admin", label: "Control Room", icon: "stats" },
+          { href: "/admin/pending", label: "Pending Joins", icon: "pending" },
           { href: "/admin/members", label: "Members", icon: "members" },
           { href: "/admin/coaches", label: "Coaches", icon: "coaches" },
           { href: "/admin/add", label: "Add Member / Coach", icon: "add" },

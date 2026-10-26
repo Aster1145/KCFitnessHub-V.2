@@ -6,6 +6,7 @@ import {
   getAllPayments,
   getAllTrainers,
   getAdminInbox,
+  getPendingMembers,
   revenueByMonth,
   attendanceLast7,
   getCheckinsOn,
@@ -40,6 +41,8 @@ import {
   ArrowRight,
   Activity,
   Flame,
+  Clock,
+  UserCheck,
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -59,6 +62,7 @@ export default async function AdminPage() {
     weeklyRaw,
     todayCheckins,
     assignments,
+    pendingMembersList,
   ] = await Promise.all([
     getAllMembers(),
     getAllMemberships(),
@@ -70,6 +74,7 @@ export default async function AdminPage() {
     attendanceLast7(),
     getCheckinsOn(today),
     db.select().from(coachAssignments).orderBy(desc(coachAssignments.createdAt)),
+    getPendingMembers(),
   ]);
 
   // ---- per-member computed rows ----
@@ -98,6 +103,7 @@ export default async function AdminPage() {
         code: u.code,
         name: u.name,
         email: u.email,
+        phone: u.phone,
         avatarHue: u.avatarHue,
         goal: u.goal,
         level: u.level,
@@ -161,6 +167,7 @@ export default async function AdminPage() {
         code: r.user.code,
         name: r.user.name,
         email: r.user.email,
+        phone: r.user.phone,
         avatarHue: r.user.avatarHue,
         plan: r.membership?.plan ?? "pt",
         remaining: r.sub?.remaining ?? 0,
@@ -172,6 +179,7 @@ export default async function AdminPage() {
       code: t.code,
       name: t.name,
       email: t.email,
+      phone: t.phone,
       specialty: t.specialty,
       avatarHue: t.avatarHue,
       createdAt: prettyDate(t.createdAt),
@@ -182,15 +190,60 @@ export default async function AdminPage() {
   const requests = inbox.filter((m) => m.body.includes("::"));
 
   return (
-    <div>
+    <div className="space-y-6">
       <PageHead
         eyebrow="Admin"
         title="Control Room"
         sub="Executive overview of KC Fitness Hub — read-only operations dashboard and high-level analytics."
       />
 
+      {/* Pending Member Registrations Alert Banner */}
+      {pendingMembersList.length > 0 && (
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 shadow-[0_0_25px_rgba(245,158,11,0.15)]">
+          <div className="flex items-center gap-3">
+            <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-amber-500 text-carbon font-bold">
+              <Clock size={20} />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-white">
+                {pendingMembersList.length} New Member {pendingMembersList.length === 1 ? "Registration" : "Registrations"} Waiting for Payment
+              </p>
+              <p className="text-xs text-amber-200/80">
+                Incoming signups from website (Google Auth & Manual) ready to confirm payment and email Member ID.
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/admin/pending"
+            className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl bg-amber-400 px-4 py-2 text-xs font-bold text-carbon hover:bg-amber-300 transition-all uppercase tracking-wider"
+          >
+            Review & Activate <ArrowRight size={13} />
+          </Link>
+        </div>
+      )}
+
       {/* Quick Navigation Cards to Subsections */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5 mb-5">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
+        <Link
+          href="/admin/pending"
+          className="group flex flex-col justify-between rounded-xl border border-line bg-smoke/60 p-3.5 hover:border-amber-400/50 hover:bg-smoke transition-all"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-semibold tracking-wider uppercase text-zinc-400 group-hover:text-amber-300 transition-colors">
+              Pending Joins
+            </span>
+            <UserCheck size={16} className="text-amber-400" />
+          </div>
+          <div className="mt-3 flex items-baseline justify-between">
+            <p className="font-display text-2xl font-bold text-amber-300">
+              {pendingMembersList.length}
+            </p>
+            <span className="text-xs text-zinc-400 group-hover:text-zinc-200 inline-flex items-center gap-0.5">
+              Review <ArrowRight size={11} />
+            </span>
+          </div>
+        </Link>
+
         <Link
           href="/admin/members"
           className="group flex flex-col justify-between rounded-xl border border-line bg-smoke/60 p-3.5 hover:border-volt/50 hover:bg-smoke transition-all"
@@ -265,7 +318,7 @@ export default async function AdminPage() {
 
         <Link
           href="/admin/revenue"
-          className="group flex flex-col justify-between rounded-xl border border-line bg-smoke/60 p-3.5 hover:border-purple-400/50 hover:bg-smoke transition-all col-span-2 sm:col-span-1"
+          className="group flex flex-col justify-between rounded-xl border border-line bg-smoke/60 p-3.5 hover:border-purple-400/50 hover:bg-smoke transition-all"
         >
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-semibold tracking-wider uppercase text-zinc-400 group-hover:text-purple-300 transition-colors">
