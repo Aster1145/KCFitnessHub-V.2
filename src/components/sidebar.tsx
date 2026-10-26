@@ -11,7 +11,10 @@ import {
   LogOut,
   Users,
   BarChart3,
-  Flame,
+  Award,
+  UserPlus,
+  RotateCcw,
+  CreditCard,
   type LucideIcon,
 } from "lucide-react";
 import { logoutAction } from "@/actions/auth";
@@ -25,6 +28,11 @@ const ICONS: Record<string, LucideIcon> = {
   coach: Handshake,
   students: Users,
   stats: BarChart3,
+  members: Users,
+  coaches: Award,
+  add: UserPlus,
+  renewals: RotateCcw,
+  revenue: CreditCard,
 };
 
 export interface NavLink {
@@ -56,9 +64,10 @@ export default function Sidebar({
   const nav = (
     <>
       {links.map((l) => {
-        const Icon = ICONS[l.icon];
+        const Icon = ICONS[l.icon] || BarChart3;
         const active =
-          pathname === l.href || (l.href !== "/" && pathname.startsWith(l.href + "/"));
+          pathname === l.href ||
+          (l.href !== "/" && l.href !== "/admin" && pathname.startsWith(l.href + "/"));
         return (
           <Link
             key={l.href}
@@ -131,10 +140,10 @@ export default function Sidebar({
         </div>
         <nav className="flex gap-1 overflow-x-auto px-3 pb-2">
           {links.map((l) => {
-            const Icon = ICONS[l.icon];
+            const Icon = ICONS[l.icon] || BarChart3;
             const active =
               pathname === l.href ||
-              (l.href !== "/" && pathname.startsWith(l.href + "/"));
+              (l.href !== "/" && l.href !== "/admin" && pathname.startsWith(l.href + "/"));
             return (
               <Link
                 key={l.href}

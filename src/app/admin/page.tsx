@@ -1,41 +1,52 @@
-import { desc, eq } from "drizzle-orm";
-import { db } from "@/db";
-import { coachAssignments } from "@/db/schema";
 import { requireRole } from "@/lib/auth";
 import {
-  attendanceLast7,
-  getAdminInbox,
-  getAllAttendance,
   getAllMembers,
   getAllMemberships,
+  getAllAttendance,
   getAllPayments,
   getAllTrainers,
-  getCheckinsOn,
+  getAdminInbox,
   revenueByMonth,
+  attendanceLast7,
+  getCheckinsOn,
 } from "@/lib/data";
-import { monthKey, monthLabel, prettyDate, prettyDateTime, todayStr, weekdayShort } from "@/lib/dates";
+import { db } from "@/db";
+import { coachAssignments } from "@/db/schema";
+import { desc } from "drizzle-orm";
 import { computeSubscription } from "@/lib/subscription";
-import { Avatar, Card, Chip, PageHead, Stat } from "@/components/ui";
-import { RevenueChart, SplitChart, WeeklyChart } from "@/components/charts";
 import {
-  AddCoachForm,
-  AddMemberForm,
-  CoachAssigner,
-  CoachesManager,
-  DeleteUserBtn,
+  inr,
+  monthKey,
+  monthLabel,
+  prettyDate,
+  prettyDateTime,
+  todayDateString,
+  weekdayShort,
+} from "@/lib/dates";
+import { PageHead, Card, Stat, Chip, Avatar } from "@/components/ui";
+import { RevenueChart, SplitChart } from "@/components/charts";
+import {
   DismissBtn,
-  MembersManager,
-  RenewForm,
-  ResetPasswordBtn,
+  ReadOnlyMembersTable,
+  ReadOnlyCoachesTable,
 } from "./admin-client";
+import Link from "next/link";
+import {
+  Users,
+  Award,
+  UserPlus,
+  RotateCcw,
+  CreditCard,
+  ArrowRight,
+  Activity,
+  Flame,
+} from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
-const inr = (n: number) => `₹${n.toLocaleString("en-IN")}`;
-
 export default async function AdminPage() {
   await requireRole("admin");
-  const today = todayStr();
+  const today = todayDateString();
 
   const [
     members,
@@ -70,7 +81,7 @@ export default async function AdminPage() {
   }
   const membershipByUser = new Map<number, (typeof membershipsAll)[number]>();
   for (const m of membershipsAll) {
-    if (!membershipByUser.has(m.userId)) membershipByUser.set(m.userId, m); // desc order ⇒ first is latest
+    if (!membershipByUser.has(m.userId)) membershipByUser.set(m.userId, m);
   }
   const coachByMember = new Map(assignments.map((a) => [a.memberId, a.trainerId]));
 
@@ -137,13 +148,11 @@ export default async function AdminPage() {
     normal: b.normal,
     pt: b.pt,
   }));
-  const weeklyData = weeklyRaw.map((w) => ({ label: weekdayShort(w.date), count: w.count }));
   const splitData = [
     { name: "Normal", value: normalRows.length },
     { name: "Personal Training", value: ptRows.length },
   ].filter((d) => d.value > 0);
 
-  const trainerOptions = trainers.map((t) => ({ id: t.id, name: t.name, specialty: t.specialty ?? "" }));
   const coachRows = trainers.map((t) => {
     const assignedMembers = rows
       .filter((r) => r.coachId === t.id)
@@ -177,14 +186,107 @@ export default async function AdminPage() {
       <PageHead
         eyebrow="Admin"
         title="Control Room"
-        sub="Everything at a glance — subscriptions, coaches, attendance and revenue."
+        sub="Executive overview of KC Fitness Hub — read-only operations dashboard and high-level analytics."
       />
 
-      {/* Stats */}
+      {/* Quick Navigation Cards to Subsections */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5 mb-5">
+        <Link
+          href="/admin/members"
+          className="group flex flex-col justify-between rounded-xl border border-line bg-smoke/60 p-3.5 hover:border-volt/50 hover:bg-smoke transition-all"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-semibold tracking-wider uppercase text-zinc-400 group-hover:text-volt transition-colors">
+              Members
+            </span>
+            <Users size={16} className="text-volt" />
+          </div>
+          <div className="mt-3 flex items-baseline justify-between">
+            <p className="font-display text-2xl font-bold text-zinc-100">{members.length}</p>
+            <span className="text-xs text-zinc-400 group-hover:text-zinc-200 inline-flex items-center gap-0.5">
+              Manage <ArrowRight size={11} />
+            </span>
+          </div>
+        </Link>
+
+        <Link
+          href="/admin/coaches"
+          className="group flex flex-col justify-between rounded-xl border border-line bg-smoke/60 p-3.5 hover:border-sky-400/50 hover:bg-smoke transition-all"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-semibold tracking-wider uppercase text-zinc-400 group-hover:text-sky-300 transition-colors">
+              Coaches
+            </span>
+            <Award size={16} className="text-sky-400" />
+          </div>
+          <div className="mt-3 flex items-baseline justify-between">
+            <p className="font-display text-2xl font-bold text-zinc-100">{trainers.length}</p>
+            <span className="text-xs text-zinc-400 group-hover:text-zinc-200 inline-flex items-center gap-0.5">
+              Roster <ArrowRight size={11} />
+            </span>
+          </div>
+        </Link>
+
+        <Link
+          href="/admin/add"
+          className="group flex flex-col justify-between rounded-xl border border-line bg-smoke/60 p-3.5 hover:border-emerald-400/50 hover:bg-smoke transition-all"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-semibold tracking-wider uppercase text-zinc-400 group-hover:text-emerald-300 transition-colors">
+              Registration
+            </span>
+            <UserPlus size={16} className="text-emerald-400" />
+          </div>
+          <div className="mt-3 flex items-baseline justify-between">
+            <p className="font-display text-xl font-bold text-emerald-300">Add New</p>
+            <span className="text-xs text-zinc-400 group-hover:text-zinc-200 inline-flex items-center gap-0.5">
+              Portal <ArrowRight size={11} />
+            </span>
+          </div>
+        </Link>
+
+        <Link
+          href="/admin/renewals"
+          className="group flex flex-col justify-between rounded-xl border border-line bg-smoke/60 p-3.5 hover:border-amber-400/50 hover:bg-smoke transition-all"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-semibold tracking-wider uppercase text-zinc-400 group-hover:text-amber-300 transition-colors">
+              Renewals
+            </span>
+            <RotateCcw size={16} className="text-amber-400" />
+          </div>
+          <div className="mt-3 flex items-baseline justify-between">
+            <p className="font-display text-2xl font-bold text-amber-300">{expiringSoon}</p>
+            <span className="text-xs text-zinc-400 group-hover:text-zinc-200 inline-flex items-center gap-0.5">
+              Expiring <ArrowRight size={11} />
+            </span>
+          </div>
+        </Link>
+
+        <Link
+          href="/admin/revenue"
+          className="group flex flex-col justify-between rounded-xl border border-line bg-smoke/60 p-3.5 hover:border-purple-400/50 hover:bg-smoke transition-all col-span-2 sm:col-span-1"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-semibold tracking-wider uppercase text-zinc-400 group-hover:text-purple-300 transition-colors">
+              Revenue
+            </span>
+            <CreditCard size={16} className="text-purple-400" />
+          </div>
+          <div className="mt-3 flex items-baseline justify-between">
+            <p className="font-display text-xl font-bold text-volt">{inr(revenueThisMonth)}</p>
+            <span className="text-xs text-zinc-400 group-hover:text-zinc-200 inline-flex items-center gap-0.5">
+              Ledger <ArrowRight size={11} />
+            </span>
+          </div>
+        </Link>
+      </div>
+
+      {/* KPI Stats */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
-        <Stat label="Members" value={members.length} sub={`${activeRows.length} active plans`} />
-        <Stat label="PT clients" value={ptRows.length} accent sub="Coached members" />
-        <Stat label="Coaches" value={trainers.length} sub="On roster" />
+        <Stat label="Total Members" value={members.length} sub={`${activeRows.length} active plans`} />
+        <Stat label="PT Clients" value={ptRows.length} accent sub="Coached members" />
+        <Stat label="Coaches" value={trainers.length} sub="Active on roster" />
         <Stat label="Checked in today" value={todayCheckins.length} sub="Live attendance" />
         <Stat label="Revenue (month)" value={inr(revenueThisMonth)} accent sub={inr(revenueTotal) + " lifetime"} />
         <Stat label="Expiring ≤3d" value={expiringSoon} sub="Sessions remaining" />
@@ -194,7 +296,7 @@ export default async function AdminPage() {
       <div className="mt-4 grid gap-4 xl:grid-cols-3">
         <Card className="xl:col-span-2">
           <div className="mb-2 flex items-center justify-between">
-            <h3 className="font-display text-xl tracking-wide uppercase">Revenue — 6 months</h3>
+            <h3 className="font-display text-xl tracking-wide uppercase">Revenue Trend — 6 months</h3>
             <div className="flex gap-3 text-[10px] font-semibold tracking-widest uppercase">
               <span className="flex items-center gap-1.5 text-zinc-400">
                 <span className="size-2 rounded-full bg-volt" /> Memberships
@@ -207,7 +309,7 @@ export default async function AdminPage() {
           <RevenueChart data={revenueData} />
         </Card>
         <Card>
-          <h3 className="font-display mb-2 text-xl tracking-wide uppercase">Plan mix</h3>
+          <h3 className="font-display mb-2 text-xl tracking-wide uppercase">Plan Mix</h3>
           <SplitChart data={splitData.length ? splitData : [{ name: "No active plans", value: 1 }]} />
           <p className="mt-2 text-center text-xs text-zinc-500">
             PT revenue share:{" "}
@@ -218,25 +320,50 @@ export default async function AdminPage() {
         </Card>
       </div>
 
+      {/* Attendance & Requests */}
       <div className="mt-4 grid gap-4 xl:grid-cols-3">
         <Card className="xl:col-span-2">
-          <h3 className="font-display mb-2 text-xl tracking-wide uppercase">
-            Check-ins — last 7 days
-          </h3>
-          <WeeklyChart data={weeklyData} />
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="font-display text-xl tracking-wide uppercase">
+              Live Check-Ins Today ({todayCheckins.length})
+            </h3>
+            <span className="flex items-center gap-1.5 text-xs text-zinc-400">
+              <span className="size-2 rounded-full bg-volt animate-pulse" />
+              Live Gym Floor
+            </span>
+          </div>
+          {todayCheckins.length === 0 ? (
+            <p className="text-xs text-zinc-500">No member check-ins recorded yet today.</p>
+          ) : (
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {todayCheckins.slice(0, 9).map((c) => (
+                <div
+                  key={c.id}
+                  className="flex items-center gap-2.5 rounded-xl border border-line bg-smoke/40 p-2.5 text-xs"
+                >
+                  <Avatar name={c.name} hue={c.hue} size={28} />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-semibold text-zinc-200">{c.name}</p>
+                    <p className="font-mono text-[10px] text-zinc-500">
+                      {new Date(c.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </Card>
+
         <Card>
           <div className="mb-3 flex items-center justify-between">
-            <h3 className="font-display text-xl tracking-wide uppercase">Requests</h3>
-            <Chip tone="volt">{requests.length} open</Chip>
+            <h3 className="font-display text-xl tracking-wide uppercase">Inbox & Requests</h3>
+            <Chip tone="zinc">{requests.length}</Chip>
           </div>
           {requests.length === 0 ? (
-            <p className="py-6 text-center text-sm text-zinc-500">
-              Inbox zero. Upgrade & coach requests land here.
-            </p>
+            <p className="text-xs text-zinc-500">No pending member or trainer requests.</p>
           ) : (
-            <ul className="max-h-56 space-y-2 overflow-y-auto pr-1">
-              {requests.map((m) => (
+            <ul className="space-y-2">
+              {requests.slice(0, 4).map((m) => (
                 <li key={m.id} className="flex items-start justify-between gap-3 rounded-xl border border-line bg-carbon p-3">
                   <div>
                     <p className="text-xs leading-relaxed text-zinc-300">{m.body.replace(" :: ", " — ")}</p>
@@ -252,104 +379,78 @@ export default async function AdminPage() {
         </Card>
       </div>
 
-      {/* Members directory with live User ID search & filtering */}
+      {/* Read-Only Members Overview */}
       <Card className="mt-4">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h3 className="font-display text-xl tracking-wide uppercase">
-              Members Directory
+              Members Overview (Read-Only)
             </h3>
             <p className="text-xs text-zinc-500">
-              Search by Member ID (e.g. KCM0001), name, or email. Manage plans, coaches, and access.
+              Active subscriptions & progress snapshot. To edit, renew, or manage members, open the Members Directory.
             </p>
           </div>
-          <Chip tone="zinc">{activeRows.length} active</Chip>
+          <Link
+            href="/admin/members"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-volt/30 bg-volt/10 px-3 py-1.5 text-xs font-bold text-volt hover:bg-volt/20 transition-all"
+          >
+            Open Members Directory <ArrowRight size={12} />
+          </Link>
         </div>
-        <MembersManager rows={rows} trainers={trainerOptions} />
+        <ReadOnlyMembersTable rows={rows} />
       </Card>
 
-      {/* Coaches Management Section */}
+      {/* Read-Only Coaches Overview */}
       <div className="mt-4 grid gap-4 xl:grid-cols-3">
         <Card className="xl:col-span-2">
           <div className="mb-3 flex items-center justify-between">
             <div>
               <h3 className="font-display text-xl tracking-wide uppercase">
-                Coaches & Trainers Roster
+                Coaches Roster (Read-Only)
               </h3>
               <p className="text-xs text-zinc-500">
-                Gym administration controls all trainer credentials and PT assignments.
+                Staff credentials and active student ratios. To manage coaches or specialties, visit Coaches Roster.
               </p>
             </div>
-            <Chip tone="blue">{trainers.length} registered</Chip>
+            <Link
+              href="/admin/coaches"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-sky-400/30 bg-sky-400/10 px-3 py-1.5 text-xs font-bold text-sky-300 hover:bg-sky-400/20 transition-all"
+            >
+              Open Coaches Roster <ArrowRight size={12} />
+            </Link>
           </div>
-          <CoachesManager coaches={coachRows} />
+          <ReadOnlyCoachesTable coaches={coachRows} />
         </Card>
 
+        {/* Recent Transactions */}
         <Card>
-          <h3 className="font-display mb-1 text-xl tracking-wide uppercase">Add Coach</h3>
-          <p className="mb-4 text-xs text-zinc-500">
-            Provision a new trainer account with email, password, and specialty.
-          </p>
-          <AddCoachForm />
-        </Card>
-      </div>
-
-      <div className="mt-4 grid gap-4 xl:grid-cols-3">
-        {/* Add member */}
-        <Card>
-          <h3 className="font-display mb-1 text-xl tracking-wide uppercase">Add Member</h3>
-          <p className="mb-4 text-xs text-zinc-500">
-            Provision a new member account with email, password, plan, and initial payment.
-          </p>
-          <AddMemberForm />
-        </Card>
-
-        {/* Payments */}
-        <Card className="xl:col-span-2">
-          <h3 className="font-display mb-3 text-xl tracking-wide uppercase">Recent Payments</h3>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[520px] text-sm">
-              <thead>
-                <tr className="border-b border-line text-left text-[10px] font-semibold tracking-[0.2em] text-zinc-500 uppercase">
-                  <th className="py-2 pr-4">Member</th>
-                  <th className="py-2 pr-4">Plan</th>
-                  <th className="py-2 pr-4">Method</th>
-                  <th className="py-2 pr-4">Date</th>
-                  <th className="py-2 text-right">Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paymentsAll.slice(0, 8).map(({ payment, name }) => (
-                  <tr key={payment.id} className="border-b border-line/60">
-                    <td className="py-2.5 pr-4 font-medium text-zinc-200">{name}</td>
-                    <td className="py-2.5 pr-4">
-                      <Chip tone={payment.plan === "pt" ? "blue" : "volt"}>
-                        {payment.plan === "pt" ? "PT" : "Normal"}
-                      </Chip>
-                    </td>
-                    <td className="py-2.5 pr-4">
-                      <span
-                        className={`inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
-                          payment.method === "Cash"
-                            ? "border border-emerald-400/30 bg-emerald-400/10 text-emerald-300"
-                            : payment.method === "Card"
-                            ? "border border-purple-400/30 bg-purple-400/10 text-purple-300"
-                            : "border border-sky-400/30 bg-sky-400/10 text-sky-300"
-                        }`}
-                      >
-                        {payment.method}
-                      </span>
-                    </td>
-                    <td className="py-2.5 pr-4 text-xs text-zinc-500">
-                      {prettyDateTime(payment.createdAt)}
-                    </td>
-                    <td className="py-2.5 text-right font-semibold text-volt">
-                      {inr(payment.amount)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="font-display text-xl tracking-wide uppercase">Recent Payments</h3>
+            <Link
+              href="/admin/revenue"
+              className="text-xs font-semibold text-volt hover:text-volt-dim transition-colors"
+            >
+              All →
+            </Link>
+          </div>
+          <div className="space-y-2.5">
+            {paymentsAll.slice(0, 5).map(({ payment, name }) => (
+              <div
+                key={payment.id}
+                className="flex items-center justify-between rounded-xl border border-line bg-carbon p-3 text-xs"
+              >
+                <div>
+                  <p className="font-medium text-zinc-200">{name}</p>
+                  <p className="text-[10px] text-zinc-500">
+                    {payment.method} · {payment.plan === "pt" ? "Personal Training" : "Gym Access"}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="font-display font-bold text-volt text-sm">{inr(payment.amount)}</p>
+                  <p className="text-[10px] text-zinc-500">{prettyDate(payment.createdAt)}</p>
+                </div>
+              </div>
+            ))}
           </div>
         </Card>
       </div>

@@ -63,3 +63,9 @@ export function weekdayShort(s: string): string {
     weekday: "short",
   });
 }
+
+export const todayDateString = todayStr;
+
+export function inr(n: number): string {
+  return "₹" + Number(n || 0).toLocaleString("en-IN");
+}
