@@ -247,7 +247,7 @@ export default function JoinPage() {
               Application Received
             </span>
 
-            <h1 className="font-display text-3xl font-extrabold uppercase tracking-wide text-white sm:text-4xl">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight text-white">
               Welcome to the Squad, {submitted.name.split(" ")[0]}!
             </h1>
 
@@ -325,8 +325,8 @@ export default function JoinPage() {
         <div className="mx-auto flex max-w-5xl items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5">
             <KcLogo className="size-8" />
-            <span className="font-display text-xl font-bold tracking-wider text-white">
-              FITNESS HUB
+            <span className="text-sm font-bold tracking-wider text-zinc-100 uppercase">
+              Fitness Hub
             </span>
           </Link>
 
@@ -353,13 +353,13 @@ export default function JoinPage() {
 
         {/* Hero Header */}
         <div className="text-center max-w-2xl mx-auto mb-10">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-volt/30 bg-volt/10 px-3.5 py-1 text-xs font-bold text-volt uppercase tracking-wider mb-3">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-volt/30 bg-volt/10 px-3.5 py-1 text-[11px] font-bold tracking-widest text-volt uppercase mb-3">
             <Zap size={13} /> Become a Member
           </span>
-          <h1 className="font-display text-4xl sm:text-5xl font-black uppercase tracking-tight text-white">
-            Join KC Fitness Hub
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-white uppercase">
+            Join <span className="text-volt">KC Fitness Hub</span>
           </h1>
-          <p className="mt-3 text-sm sm:text-base text-zinc-400">
+          <p className="mt-3 text-sm sm:text-base text-zinc-400 max-w-xl mx-auto leading-relaxed">
             Fair attendance billing, 1-on-1 coach support, and AI-driven workout architectures. Fill in your details below to begin.
           </p>
         </div>
@@ -369,9 +369,14 @@ export default function JoinPage() {
           <div className="lg:col-span-8 rounded-3xl border border-line bg-smoke/80 p-6 sm:p-8 backdrop-blur-md shadow-2xl">
             {/* Step 1: Authentication Choice */}
             <div className="mb-8">
-              <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-3">
-                1. Choose Sign-Up Method
-              </label>
+              <div className="flex items-center gap-2 mb-3">
+                <span className="grid size-5 place-items-center rounded-full bg-volt/20 text-[10px] font-mono font-bold text-volt">
+                  1
+                </span>
+                <span className="text-xs font-bold uppercase tracking-wider text-zinc-300">
+                  Choose Sign-Up Method
+                </span>
+              </div>
 
               <div className="grid grid-cols-2 gap-3 mb-4">
                 <button
@@ -495,14 +500,19 @@ export default function JoinPage() {
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Step 2: Contact Information */}
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-3">
-                  2. Personal & Contact Details
-                </label>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="grid size-5 place-items-center rounded-full bg-volt/20 text-[10px] font-mono font-bold text-volt">
+                    2
+                  </span>
+                  <span className="text-xs font-bold uppercase tracking-wider text-zinc-300">
+                    Personal & Contact Details
+                  </span>
+                </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold text-zinc-400 mb-1">
-                      Full Name *
+                    <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
+                      Full Name <span className="text-volt">*</span>
                     </label>
                     <div className="relative">
                       <User size={15} className="absolute left-3.5 top-3.5 text-zinc-500" />
@@ -518,8 +528,8 @@ export default function JoinPage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-zinc-400 mb-1">
-                      Email Address *
+                    <label className="block text-xs font-semibold text-zinc-300 mb-1.5">
+                      Email Address <span className="text-volt">*</span>
                     </label>
                     <div className="relative">
                       <Mail size={15} className="absolute left-3.5 top-3.5 text-zinc-500" />
@@ -535,12 +545,14 @@ export default function JoinPage() {
                   </div>
 
                   <div className="sm:col-span-2">
-                    <label className="block text-xs font-semibold text-zinc-400 mb-1">
-                      Mobile / WhatsApp Number *{" "}
-                      <span className="text-[10px] text-zinc-500">
-                        (Used for official Member ID communication & gym updates)
+                    <div className="flex flex-wrap items-center justify-between gap-1 mb-1.5">
+                      <label className="text-xs font-semibold text-zinc-300">
+                        Mobile / WhatsApp Number <span className="text-volt">*</span>
+                      </label>
+                      <span className="text-[11px] text-zinc-500">
+                        Official Member ID & credentials will be sent here
                       </span>
-                    </label>
+                    </div>
                     <div className="relative">
                       <Phone size={15} className="absolute left-3.5 top-3.5 text-zinc-500" />
                       <input
@@ -558,9 +570,14 @@ export default function JoinPage() {
 
               {/* Step 3: Choose Plan */}
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-3">
-                  3. Select Membership Plan
-                </label>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="grid size-5 place-items-center rounded-full bg-volt/20 text-[10px] font-mono font-bold text-volt">
+                    3
+                  </span>
+                  <span className="text-xs font-bold uppercase tracking-wider text-zinc-300">
+                    Select Membership Plan
+                  </span>
+                </div>
 
                 <div className="space-y-2.5">
                   {PLANS.map((p) => {
@@ -600,7 +617,7 @@ export default function JoinPage() {
                         </div>
 
                         <div className="text-right">
-                          <span className="font-display text-lg font-black text-volt">
+                          <span className="font-mono text-base sm:text-lg font-extrabold text-volt">
                             {p.price}
                           </span>
                         </div>
@@ -612,9 +629,14 @@ export default function JoinPage() {
 
               {/* Step 4: Fitness Goals & Experience */}
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-3">
-                  4. Primary Fitness Goal & Experience
-                </label>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="grid size-5 place-items-center rounded-full bg-volt/20 text-[10px] font-mono font-bold text-volt">
+                    4
+                  </span>
+                  <span className="text-xs font-bold uppercase tracking-wider text-zinc-300">
+                    Primary Fitness Goal & Experience
+                  </span>
+                </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-4">
                   {GOALS.map((g) => (
@@ -652,11 +674,16 @@ export default function JoinPage() {
                 </div>
               </div>
 
-              {/* Optional Notes */}
+              {/* Step 5: Optional Notes */}
               <div>
-                <label className="block text-xs font-semibold text-zinc-400 mb-1">
-                  Preferred Training Hours / Special Requests (Optional)
-                </label>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="grid size-5 place-items-center rounded-full bg-zinc-800 text-[10px] font-mono font-bold text-zinc-400">
+                    5
+                  </span>
+                  <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+                    Training Notes & Preferences (Optional)
+                  </span>
+                </div>
                 <textarea
                   rows={2}
                   placeholder="e.g. Morning 6 AM - 8 AM, looking to prepare for powerlifting..."
@@ -700,7 +727,8 @@ export default function JoinPage() {
           {/* Sidebar Info Column */}
           <div className="lg:col-span-4 space-y-6">
             <div className="rounded-3xl border border-line bg-smoke/60 p-6 backdrop-blur-md">
-              <h3 className="font-display text-lg font-bold uppercase tracking-wide text-white mb-4">
+              <h3 className="text-sm sm:text-base font-bold text-white tracking-wide uppercase flex items-center gap-2 mb-4">
+                <ShieldCheck size={18} className="text-volt" />
                 The KC Fitness Guarantee
               </h3>
 
