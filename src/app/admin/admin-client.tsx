@@ -3,16 +3,25 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
+  Activity,
+  Award,
   Banknote,
+  Calendar,
   Check,
   ChevronDown,
   Copy,
   CreditCard,
+  Dumbbell,
+  Eye,
+  Flame,
   KeyRound,
   LoaderCircle,
+  Mail,
   QrCode,
   RotateCcw,
   Search,
+  Sparkles,
+  Target,
   Trash2,
   UserCheck,
   UserPlus,
@@ -40,11 +49,15 @@ export type MemberRowData = {
     name: string;
     email: string;
     avatarHue: number;
+    goal?: string | null;
+    level?: string | null;
+    createdAt?: string | null;
   };
   membership: {
     id: number;
     plan: "normal" | "pt";
     durationDays: number;
+    startDate?: string | null;
     pricePaid: number;
   } | null;
   sub: {
@@ -56,6 +69,37 @@ export type MemberRowData = {
     absent: number;
   } | null;
   coachId: number | null;
+  coachName?: string | null;
+  coachCode?: string | null;
+  coachSpecialty?: string | null;
+  attendanceCount?: number;
+  latestPayment?: {
+    amount: number;
+    method: string;
+    plan: string;
+    date: string;
+  } | null;
+};
+
+export type CoachDetailData = {
+  id: number;
+  code: string | null;
+  name: string;
+  email: string;
+  specialty: string | null;
+  avatarHue: number;
+  createdAt?: string | null;
+  clientsCount: number;
+  clients: {
+    id: number;
+    code: string | null;
+    name: string;
+    email: string;
+    avatarHue: number;
+    plan: string;
+    remaining: number;
+    active: boolean;
+  }[];
 };
 
 export function MembersManager({
@@ -67,6 +111,7 @@ export function MembersManager({
 }) {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all" | "active" | "pt" | "expiring">("all");
+  const [selectedMember, setSelectedMember] = useState<MemberRowData | null>(null);
 
   const filtered = useMemo(() => {
     return rows.filter((r) => {
@@ -181,9 +226,17 @@ export function MembersManager({
           </thead>
           <tbody>
             {filtered.map((r) => (
-              <tr key={r.user.id} className="border-b border-line/60 align-middle">
+              <tr
+                key={r.user.id}
+                onClick={() => setSelectedMember(r)}
+                className="group border-b border-line/60 align-middle hover:bg-smoke/70 cursor-pointer transition-colors"
+              >
                 <td className="py-3 pr-3">
-                  <span className="inline-flex items-center rounded-md border border-volt/30 bg-volt/10 px-2 py-0.5 font-mono text-[11px] font-bold text-volt">
+                  <span
+                    className="inline-flex items-center gap-1 rounded-md border border-volt/30 bg-volt/10 px-2 py-0.5 font-mono text-[11px] font-bold text-volt group-hover:border-volt group-hover:bg-volt/20 transition-all"
+                    title="Click to view member card"
+                  >
+                    <Eye size={10} className="opacity-70 group-hover:opacity-100" />
                     {r.user.code || `KCM${String(r.user.id).padStart(4, "0")}`}
                   </span>
                 </td>
@@ -191,7 +244,9 @@ export function MembersManager({
                   <div className="flex items-center gap-3">
                     <Avatar name={r.user.name} hue={r.user.avatarHue} size={34} />
                     <div>
-                      <p className="font-medium text-zinc-100">{r.user.name}</p>
+                      <p className="font-medium text-zinc-100 group-hover:text-volt transition-colors">
+                        {r.user.name}
+                      </p>
                       <p className="text-xs text-zinc-500">{r.user.email}</p>
                     </div>
                   </div>
@@ -236,7 +291,7 @@ export function MembersManager({
                     "—"
                   )}
                 </td>
-                <td className="py-3 pr-4">
+                <td className="py-3 pr-4" onClick={(e) => e.stopPropagation()}>
                   {r.membership?.plan === "pt" ? (
                     <CoachAssigner
                       memberId={r.user.id}
@@ -247,8 +302,20 @@ export function MembersManager({
                     <span className="text-xs text-zinc-600">not eligible</span>
                   )}
                 </td>
-                <td className="py-3 text-right">
+                <td className="py-3 text-right" onClick={(e) => e.stopPropagation()}>
                   <div className="flex items-center justify-end gap-1.5">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedMember(r);
+                      }}
+                      className="flex items-center gap-1 rounded-lg border border-line px-2 py-1.5 text-xs font-medium text-zinc-400 hover:border-volt/40 hover:text-volt"
+                      title="View Member Details Card"
+                    >
+                      <Eye size={12} />
+                      <span className="hidden sm:inline">Card</span>
+                    </button>
                     <RenewForm memberId={r.user.id} />
                     <ResetPasswordBtn userId={r.user.id} userName={r.user.name} />
                     <DeleteUserBtn userId={r.user.id} userName={r.user.name} />
@@ -268,6 +335,14 @@ export function MembersManager({
           </tbody>
         </table>
       </div>
+
+      {selectedMember ? (
+        <MemberDetailModal
+          member={selectedMember}
+          trainers={trainers}
+          onClose={() => setSelectedMember(null)}
+        />
+      ) : null}
     </div>
   );
 }
@@ -647,32 +722,24 @@ export function AddCoachForm() {
 }
 
 export function CoachesManager({
-  trainers,
-  studentCounts,
+  coaches,
 }: {
-  trainers: {
-    id: number;
-    code: string | null;
-    name: string;
-    email: string;
-    specialty: string | null;
-    avatarHue: number;
-  }[];
-  studentCounts: Record<number, number>;
+  coaches: CoachDetailData[];
 }) {
   const [search, setSearch] = useState("");
+  const [selectedCoach, setSelectedCoach] = useState<CoachDetailData | null>(null);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return trainers;
-    return trainers.filter(
+    if (!q) return coaches;
+    return coaches.filter(
       (t) =>
         (t.code && t.code.toLowerCase().includes(q)) ||
         t.name.toLowerCase().includes(q) ||
         t.email.toLowerCase().includes(q) ||
         (t.specialty && t.specialty.toLowerCase().includes(q))
     );
-  }, [trainers, search]);
+  }, [coaches, search]);
 
   return (
     <div>
@@ -711,9 +778,17 @@ export function CoachesManager({
           </thead>
           <tbody>
             {filtered.map((t) => (
-              <tr key={t.id} className="border-b border-line/60 align-middle">
+              <tr
+                key={t.id}
+                onClick={() => setSelectedCoach(t)}
+                className="group border-b border-line/60 align-middle hover:bg-smoke/70 cursor-pointer transition-colors"
+              >
                 <td className="py-3 pr-3">
-                  <span className="inline-flex items-center rounded-md border border-sky-400/30 bg-sky-400/10 px-2 py-0.5 font-mono text-[11px] font-bold text-sky-300">
+                  <span
+                    className="inline-flex items-center gap-1 rounded-md border border-sky-400/30 bg-sky-400/10 px-2 py-0.5 font-mono text-[11px] font-bold text-sky-300 group-hover:border-sky-400 group-hover:bg-sky-400/20 transition-all"
+                    title="Click to view coach card"
+                  >
+                    <Eye size={10} className="opacity-70 group-hover:opacity-100" />
                     {t.code || `KCC${String(t.id).padStart(4, "0")}`}
                   </span>
                 </td>
@@ -721,7 +796,9 @@ export function CoachesManager({
                   <div className="flex items-center gap-3">
                     <Avatar name={t.name} hue={t.avatarHue} size={34} />
                     <div>
-                      <p className="font-medium text-zinc-100">{t.name}</p>
+                      <p className="font-medium text-zinc-100 group-hover:text-sky-300 transition-colors">
+                        {t.name}
+                      </p>
                       <p className="text-xs text-zinc-500">{t.email}</p>
                     </div>
                   </div>
@@ -730,10 +807,22 @@ export function CoachesManager({
                   <Chip tone="blue">{t.specialty || "Coach"}</Chip>
                 </td>
                 <td className="py-3 pr-4 text-xs font-semibold text-zinc-300">
-                  {studentCounts[t.id] ?? 0} active
+                  {t.clientsCount} active
                 </td>
-                <td className="py-3 text-right">
+                <td className="py-3 text-right" onClick={(e) => e.stopPropagation()}>
                   <div className="flex items-center justify-end gap-1.5">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedCoach(t);
+                      }}
+                      className="flex items-center gap-1 rounded-lg border border-line px-2 py-1.5 text-xs font-medium text-zinc-400 hover:border-sky-400/40 hover:text-sky-300"
+                      title="View Coach Details Card"
+                    >
+                      <Eye size={12} />
+                      <span className="hidden sm:inline">Card</span>
+                    </button>
                     <ResetPasswordBtn userId={t.id} userName={t.name} />
                     <DeleteUserBtn userId={t.id} userName={t.name} />
                   </div>
@@ -752,6 +841,13 @@ export function CoachesManager({
           </tbody>
         </table>
       </div>
+
+      {selectedCoach ? (
+        <CoachDetailModal
+          coach={selectedCoach}
+          onClose={() => setSelectedCoach(null)}
+        />
+      ) : null}
     </div>
   );
 }
@@ -1085,6 +1181,395 @@ export function RenewForm({ memberId }: { memberId: number }) {
           </button>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+export function MemberDetailModal({
+  member,
+  trainers,
+  onClose,
+}: {
+  member: MemberRowData;
+  trainers: { id: number; name: string; specialty: string }[];
+  onClose: () => void;
+}) {
+  const [copiedId, setCopiedId] = useState(false);
+
+  const copyId = () => {
+    if (!member.user.code) return;
+    navigator.clipboard.writeText(member.user.code);
+    setCopiedId(true);
+    setTimeout(() => setCopiedId(false), 2000);
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md"
+      onClick={onClose}
+    >
+      <div
+        className="relative max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl border border-line bg-smoke p-6 shadow-2xl shadow-black/90"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Close Button */}
+        <button
+          onClick={onClose}
+          className="absolute right-4 top-4 rounded-lg border border-line bg-carbon p-1.5 text-zinc-400 hover:text-zinc-100"
+        >
+          <X size={16} />
+        </button>
+
+        {/* Header with Avatar & Details */}
+        <div className="flex items-start gap-4 pb-5 border-b border-line">
+          <Avatar name={member.user.name} hue={member.user.avatarHue} size={58} />
+          <div className="flex-1 pr-6">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="font-display text-2xl font-bold tracking-wide uppercase text-white">
+                {member.user.name}
+              </h2>
+              <span className="inline-flex items-center rounded-md border border-volt/30 bg-volt/10 px-2 py-0.5 font-mono text-xs font-bold text-volt">
+                {member.user.code || `KCM${String(member.user.id).padStart(4, "0")}`}
+              </span>
+              <button
+                type="button"
+                onClick={copyId}
+                className="text-[11px] font-semibold text-zinc-400 hover:text-volt transition-colors inline-flex items-center gap-1"
+                title="Copy Member ID"
+              >
+                {copiedId ? <Check size={12} className="text-volt" /> : <Copy size={12} />}
+                <span className="text-[10px] uppercase">{copiedId ? "Copied" : "Copy"}</span>
+              </button>
+            </div>
+
+            <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-zinc-400">
+              <span className="flex items-center gap-1">
+                <Mail size={12} className="text-zinc-500" />
+                <a href={`mailto:${member.user.email}`} className="hover:text-zinc-200">
+                  {member.user.email}
+                </a>
+              </span>
+              <span>•</span>
+              <span className="flex items-center gap-1">
+                <Calendar size={12} className="text-zinc-500" />
+                Joined: {member.user.createdAt || "Active"}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Subscription Status Card */}
+        <div className="mt-5 space-y-4">
+          <div className="rounded-xl border border-line bg-carbon/70 p-4">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[10px] font-semibold tracking-widest uppercase text-zinc-400">
+                Subscription Status
+              </span>
+              {member.sub?.active ? (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-volt/30 bg-volt/10 px-2.5 py-0.5 text-xs font-bold text-volt">
+                  <span className="size-1.5 rounded-full bg-volt animate-pulse" />
+                  Active Membership
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-red-400/30 bg-red-400/10 px-2.5 py-0.5 text-xs font-bold text-red-300">
+                  <span className="size-1.5 rounded-full bg-red-400" />
+                  Inactive / Expired
+                </span>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="rounded-lg border border-line/60 bg-smoke/40 p-2.5">
+                <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Plan Type</p>
+                <p className="mt-0.5 font-bold text-zinc-100 flex items-center gap-1.5">
+                  <Dumbbell size={13} className="text-volt" />
+                  {member.membership?.plan === "pt" ? "Personal Training (PT)" : "Normal Gym Access"}
+                </p>
+              </div>
+
+              <div className="rounded-lg border border-line/60 bg-smoke/40 p-2.5">
+                <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Gym Check-Ins</p>
+                <p className="mt-0.5 font-bold text-zinc-100 flex items-center gap-1.5">
+                  <Activity size={13} className="text-volt" />
+                  {member.attendanceCount ?? 0} days attended
+                </p>
+              </div>
+            </div>
+
+            {member.sub ? (
+              <div className="mt-3 rounded-lg border border-line/60 bg-smoke/40 p-3">
+                <div className="flex items-center justify-between text-xs mb-1.5">
+                  <span className="text-zinc-400">Sessions Remaining:</span>
+                  <span className="font-bold text-zinc-100 font-mono">
+                    <span className="text-volt">{member.sub.remaining}</span> / {member.sub.totalDays} sessions
+                  </span>
+                </div>
+                <div className="h-2 w-full overflow-hidden rounded-full bg-carbon">
+                  <div
+                    className={`h-full rounded-full transition-all ${
+                      member.sub.active ? "bg-volt shadow-[0_0_10px_rgba(204,255,0,0.5)]" : "bg-zinc-600"
+                    }`}
+                    style={{ width: `${member.sub.pct}%` }}
+                  />
+                </div>
+                <div className="mt-2 flex items-center justify-between text-[11px] text-zinc-400">
+                  <span>Cycle end: <strong className="text-zinc-200">{member.sub.endDate}</strong></span>
+                  <span className="text-zinc-500">(+{member.sub.absent}d absent buffer)</span>
+                </div>
+              </div>
+            ) : null}
+
+            {member.latestPayment ? (
+              <div className="mt-3 flex items-center justify-between rounded-lg border border-line/40 bg-smoke/20 px-3 py-2 text-xs">
+                <span className="text-zinc-400">Latest Payment:</span>
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-zinc-100">₹{member.latestPayment.amount.toLocaleString("en-IN")}</span>
+                  <span
+                    className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                      member.latestPayment.method === "Cash"
+                        ? "border border-emerald-400/30 bg-emerald-400/10 text-emerald-300"
+                        : member.latestPayment.method === "Card"
+                        ? "border border-purple-400/30 bg-purple-400/10 text-purple-300"
+                        : "border border-sky-400/30 bg-sky-400/10 text-sky-300"
+                    }`}
+                  >
+                    {member.latestPayment.method}
+                  </span>
+                  <span className="text-[10px] text-zinc-500">{member.latestPayment.date}</span>
+                </div>
+              </div>
+            ) : null}
+          </div>
+
+          {/* Fitness Goals Profile */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-xl border border-line bg-carbon/70 p-3.5">
+              <span className="text-[10px] font-semibold tracking-widest uppercase text-zinc-400 flex items-center gap-1.5 mb-1.5">
+                <Target size={12} className="text-volt" /> Fitness Goal
+              </span>
+              <p className="text-sm font-semibold text-zinc-100 capitalize">
+                {member.user.goal || "General Fitness"}
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-line bg-carbon/70 p-3.5">
+              <span className="text-[10px] font-semibold tracking-widest uppercase text-zinc-400 flex items-center gap-1.5 mb-1.5">
+                <Flame size={12} className="text-volt" /> Experience Level
+              </span>
+              <p className="text-sm font-semibold text-zinc-100 capitalize">
+                {member.user.level || "Beginner"}
+              </p>
+            </div>
+          </div>
+
+          {/* Assigned Coach Section */}
+          <div className="rounded-xl border border-line bg-carbon/70 p-3.5">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] font-semibold tracking-widest uppercase text-zinc-400 flex items-center gap-1.5">
+                <Award size={12} className="text-sky-400" /> Assigned Coach / Trainer
+              </span>
+              {member.membership?.plan === "pt" ? (
+                <Chip tone="blue">PT Coached</Chip>
+              ) : (
+                <Chip tone="zinc">General Plan</Chip>
+              )}
+            </div>
+
+            {member.membership?.plan === "pt" ? (
+              <div className="flex items-center justify-between gap-3 pt-1">
+                <div>
+                  <p className="font-semibold text-zinc-200">
+                    {member.coachName || "No coach assigned yet"}
+                  </p>
+                  {member.coachSpecialty ? (
+                    <p className="text-xs text-zinc-500">{member.coachSpecialty}</p>
+                  ) : null}
+                </div>
+                <div onClick={(e) => e.stopPropagation()}>
+                  <CoachAssigner
+                    memberId={member.user.id}
+                    trainers={trainers}
+                    currentId={member.coachId}
+                  />
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs text-zinc-500">
+                General gym access. Upgrading to Personal Training enables coach assignment.
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Modal Actions Footer */}
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-4">
+          <div className="flex items-center gap-2">
+            <RenewForm memberId={member.user.id} />
+            <ResetPasswordBtn userId={member.user.id} userName={member.user.name} />
+            <DeleteUserBtn userId={member.user.id} userName={member.user.name} />
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-xl border border-line bg-carbon px-4 py-2 text-xs font-semibold text-zinc-300 hover:bg-smoke hover:text-white"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function CoachDetailModal({
+  coach,
+  onClose,
+}: {
+  coach: CoachDetailData;
+  onClose: () => void;
+}) {
+  const [copiedId, setCopiedId] = useState(false);
+
+  const copyId = () => {
+    if (!coach.code) return;
+    navigator.clipboard.writeText(coach.code);
+    setCopiedId(true);
+    setTimeout(() => setCopiedId(false), 2000);
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-md"
+      onClick={onClose}
+    >
+      <div
+        className="relative max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-2xl border border-line bg-smoke p-6 shadow-2xl shadow-black/90"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Close Button */}
+        <button
+          onClick={onClose}
+          className="absolute right-4 top-4 rounded-lg border border-line bg-carbon p-1.5 text-zinc-400 hover:text-zinc-100"
+        >
+          <X size={16} />
+        </button>
+
+        {/* Header with Avatar & Details */}
+        <div className="flex items-start gap-4 pb-5 border-b border-line">
+          <Avatar name={coach.name} hue={coach.avatarHue} size={58} />
+          <div className="flex-1 pr-6">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="font-display text-2xl font-bold tracking-wide uppercase text-white">
+                {coach.name}
+              </h2>
+              <span className="inline-flex items-center rounded-md border border-sky-400/30 bg-sky-400/10 px-2 py-0.5 font-mono text-xs font-bold text-sky-300">
+                {coach.code || `KCC${String(coach.id).padStart(4, "0")}`}
+              </span>
+              <button
+                type="button"
+                onClick={copyId}
+                className="text-[11px] font-semibold text-zinc-400 hover:text-sky-300 transition-colors inline-flex items-center gap-1"
+                title="Copy Coach ID"
+              >
+                {copiedId ? <Check size={12} className="text-sky-300" /> : <Copy size={12} />}
+                <span className="text-[10px] uppercase">{copiedId ? "Copied" : "Copy"}</span>
+              </button>
+            </div>
+
+            <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-zinc-400">
+              <span className="flex items-center gap-1">
+                <Mail size={12} className="text-zinc-500" />
+                <a href={`mailto:${coach.email}`} className="hover:text-zinc-200">
+                  {coach.email}
+                </a>
+              </span>
+              <span>•</span>
+              <span className="flex items-center gap-1">
+                <Calendar size={12} className="text-zinc-500" />
+                Joined: {coach.createdAt || "Active Coach"}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Coach Specialty & Credentials */}
+        <div className="mt-5 space-y-4">
+          <div className="rounded-xl border border-line bg-carbon/70 p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] font-semibold tracking-widest uppercase text-zinc-400">
+                Specialty & Certification
+              </span>
+              <Chip tone="blue">Certified KC Coach</Chip>
+            </div>
+            <p className="text-sm font-semibold text-zinc-100 flex items-center gap-2">
+              <Award size={15} className="text-sky-400" />
+              {coach.specialty || "Strength & Conditioning"}
+            </p>
+          </div>
+
+          {/* Assigned PT Clients Roster */}
+          <div className="rounded-xl border border-line bg-carbon/70 p-4">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[10px] font-semibold tracking-widest uppercase text-zinc-400">
+                Assigned PT Clients
+              </span>
+              <span className="rounded-full border border-sky-400/30 bg-sky-400/10 px-2.5 py-0.5 text-xs font-bold text-sky-300">
+                {coach.clientsCount} Active Clients
+              </span>
+            </div>
+
+            {coach.clients.length > 0 ? (
+              <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                {coach.clients.map((c) => (
+                  <div
+                    key={c.id}
+                    className="flex items-center justify-between rounded-lg border border-line/60 bg-smoke/40 p-2.5 text-xs"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <Avatar name={c.name} hue={c.avatarHue} size={28} />
+                      <div>
+                        <p className="font-semibold text-zinc-100">{c.name}</p>
+                        <p className="font-mono text-[10px] text-volt">
+                          {c.code || `KCM${String(c.id).padStart(4, "0")}`}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold text-zinc-200">
+                        {c.remaining} sessions left
+                      </p>
+                      <span className={`text-[10px] ${c.active ? "text-emerald-400" : "text-zinc-500"}`}>
+                        {c.active ? "● Active Plan" : "○ Inactive"}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-lg border border-dashed border-line/60 p-5 text-center text-xs text-zinc-500">
+                No PT clients currently assigned to {coach.name}.
+                <br />
+                You can assign members to this coach in the Members Directory.
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Modal Actions Footer */}
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-4">
+          <div className="flex items-center gap-2">
+            <ResetPasswordBtn userId={coach.id} userName={coach.name} />
+            <DeleteUserBtn userId={coach.id} userName={coach.name} />
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-xl border border-line bg-carbon px-4 py-2 text-xs font-semibold text-zinc-300 hover:bg-smoke hover:text-white"
+          >
+            Close
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

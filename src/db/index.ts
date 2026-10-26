@@ -2,7 +2,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 
 const DEFAULT_SUPABASE_POOLER =
-  "postgresql://postgres.bohgzryjrloywzxxkrlf:Aster%401145%2F@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres";
+  "postgresql://postgres.bohgzryjrloywzxxkrlf:Aster%401145%2F@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres";
 
 let databaseUrl =
   process.env.DATABASE_URL ||
@@ -13,6 +13,11 @@ let databaseUrl =
 // If set to direct IPv6 host (which times out on serverless / non-IPv6 networks), rewrite to reliable IPv4 pooler
 if (databaseUrl.includes("db.bohgzryjrloywzxxkrlf.supabase.co:5432")) {
   databaseUrl = DEFAULT_SUPABASE_POOLER;
+}
+
+// If using session mode pooler (port 5432), rewrite to transaction mode (port 6543) to support unlimited serverless clients
+if (databaseUrl.includes(".pooler.supabase.com:5432")) {
+  databaseUrl = databaseUrl.replace(".pooler.supabase.com:5432", ".pooler.supabase.com:6543");
 }
 
 const isSupabase =
@@ -30,8 +35,8 @@ export const pool =
     connectionString: databaseUrl,
     ssl: isSupabase ? { rejectUnauthorized: false } : undefined,
     connectionTimeoutMillis: 10000,
-    idleTimeoutMillis: 30000,
-    max: 10,
+    idleTimeoutMillis: 10000,
+    max: 5,
   });
 
 if (process.env.NODE_ENV !== "production") {

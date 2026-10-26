@@ -77,6 +77,10 @@ export default async function AdminPage() {
   const rows = members.map((u) => {
     const ms = membershipByUser.get(u.id) ?? null;
     const sub = ms ? computeSubscription(ms, attendanceByUser.get(u.id) ?? [], today) : null;
+    const coachId = coachByMember.get(u.id) ?? null;
+    const assignedCoach = coachId ? trainers.find((t) => t.id === coachId) : null;
+    const userPayment = paymentsAll.find((p) => p.payment.userId === u.id);
+
     return {
       user: {
         id: u.id,
@@ -84,6 +88,9 @@ export default async function AdminPage() {
         name: u.name,
         email: u.email,
         avatarHue: u.avatarHue,
+        goal: u.goal,
+        level: u.level,
+        createdAt: prettyDate(u.createdAt),
       },
       membership: ms,
       sub: sub
@@ -96,7 +103,19 @@ export default async function AdminPage() {
             absent: sub.absent,
           }
         : null,
-      coachId: coachByMember.get(u.id) ?? null,
+      coachId,
+      coachName: assignedCoach?.name ?? null,
+      coachCode: assignedCoach?.code ?? null,
+      coachSpecialty: assignedCoach?.specialty ?? null,
+      attendanceCount: (attendanceByUser.get(u.id) ?? []).length,
+      latestPayment: userPayment
+        ? {
+            amount: userPayment.payment.amount,
+            method: userPayment.payment.method,
+            plan: userPayment.payment.plan,
+            date: prettyDateTime(userPayment.payment.createdAt),
+          }
+        : null,
     };
   });
 
@@ -125,10 +144,32 @@ export default async function AdminPage() {
   ].filter((d) => d.value > 0);
 
   const trainerOptions = trainers.map((t) => ({ id: t.id, name: t.name, specialty: t.specialty ?? "" }));
-  const studentCountByTrainer: Record<number, number> = {};
-  for (const a of assignments) {
-    studentCountByTrainer[a.trainerId] = (studentCountByTrainer[a.trainerId] ?? 0) + 1;
-  }
+  const coachRows = trainers.map((t) => {
+    const assignedMembers = rows
+      .filter((r) => r.coachId === t.id)
+      .map((r) => ({
+        id: r.user.id,
+        code: r.user.code,
+        name: r.user.name,
+        email: r.user.email,
+        avatarHue: r.user.avatarHue,
+        plan: r.membership?.plan ?? "pt",
+        remaining: r.sub?.remaining ?? 0,
+        active: r.sub?.active ?? false,
+      }));
+
+    return {
+      id: t.id,
+      code: t.code,
+      name: t.name,
+      email: t.email,
+      specialty: t.specialty,
+      avatarHue: t.avatarHue,
+      createdAt: prettyDate(t.createdAt),
+      clientsCount: assignedMembers.length,
+      clients: assignedMembers,
+    };
+  });
   const requests = inbox.filter((m) => m.body.includes("::"));
 
   return (
@@ -241,7 +282,7 @@ export default async function AdminPage() {
             </div>
             <Chip tone="blue">{trainers.length} registered</Chip>
           </div>
-          <CoachesManager trainers={trainers} studentCounts={studentCountByTrainer} />
+          <CoachesManager coaches={coachRows} />
         </Card>
 
         <Card>
