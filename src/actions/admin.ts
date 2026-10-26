@@ -19,6 +19,25 @@ async function requireAdmin() {
   return user;
 }
 
+async function getNextUserCode(role: "member" | "trainer" | "admin"): Promise<string> {
+  const prefix = role === "member" ? "KCM" : role === "trainer" ? "KCC" : "KCA";
+  const rows = await db
+    .select({ code: users.code })
+    .from(users)
+    .where(eq(users.role, role));
+
+  let maxNum = 0;
+  for (const r of rows) {
+    if (r.code && r.code.toUpperCase().startsWith(prefix)) {
+      const num = parseInt(r.code.slice(prefix.length), 10);
+      if (!isNaN(num) && num > maxNum) {
+        maxNum = num;
+      }
+    }
+  }
+  return `${prefix}${String(maxNum + 1).padStart(4, "0")}`;
+}
+
 export async function addMemberAction(input: {
   name: string;
   email: string;
@@ -26,6 +45,7 @@ export async function addMemberAction(input: {
   plan: "normal" | "pt";
   durationDays: number;
   price: number;
+  paymentMethod?: "UPI" | "Cash" | "Card";
   goal?: string;
 }) {
   await requireAdmin();
@@ -45,9 +65,12 @@ export async function addMemberAction(input: {
   const existing = await db.select().from(users).where(eq(users.email, email)).limit(1);
   if (existing.length) return { ok: false, error: "Email already registered" };
 
+  const code = await getNextUserCode("member");
+
   const [member] = await db
     .insert(users)
     .values({
+      code,
       name,
       email,
       passwordHash: hashPassword(finalPassword),
@@ -71,11 +94,12 @@ export async function addMemberAction(input: {
       userId: member.id,
       amount: Math.round(input.price),
       plan: input.plan,
+      method: input.paymentMethod || "UPI",
     });
   }
 
   revalidatePath("/admin");
-  return { ok: true, password: finalPassword, email: member.email, name: member.name };
+  return { ok: true, code, password: finalPassword, email: member.email, name: member.name };
 }
 
 export async function addCoachAction(input: {
@@ -100,9 +124,12 @@ export async function addCoachAction(input: {
   const existing = await db.select().from(users).where(eq(users.email, email)).limit(1);
   if (existing.length) return { ok: false, error: "Email already registered" };
 
+  const code = await getNextUserCode("trainer");
+
   const [coach] = await db
     .insert(users)
     .values({
+      code,
       name,
       email,
       passwordHash: hashPassword(finalPassword),
@@ -114,7 +141,7 @@ export async function addCoachAction(input: {
 
   revalidatePath("/admin");
   revalidatePath("/trainer");
-  return { ok: true, password: finalPassword, email: coach.email, name: coach.name };
+  return { ok: true, code, password: finalPassword, email: coach.email, name: coach.name };
 }
 
 export async function updateUserPasswordAction(userId: number, newPassword: string) {
@@ -150,7 +177,8 @@ export async function renewMembershipAction(
   memberId: number,
   plan: "normal" | "pt",
   durationDays: number,
-  price: number
+  price: number,
+  paymentMethod: "UPI" | "Cash" | "Card" = "UPI"
 ) {
   await requireAdmin();
   await db.insert(memberships).values({
@@ -163,7 +191,12 @@ export async function renewMembershipAction(
   if (price > 0) {
     await db
       .insert(payments)
-      .values({ userId: memberId, amount: Math.round(price), plan });
+      .values({
+        userId: memberId,
+        amount: Math.round(price),
+        plan,
+        method: paymentMethod,
+      });
   }
   revalidatePath("/admin");
   return { ok: true };

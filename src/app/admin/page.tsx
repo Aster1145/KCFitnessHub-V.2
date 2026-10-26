@@ -24,6 +24,7 @@ import {
   CoachesManager,
   DeleteUserBtn,
   DismissBtn,
+  MembersManager,
   RenewForm,
   ResetPasswordBtn,
 } from "./admin-client";
@@ -77,9 +78,24 @@ export default async function AdminPage() {
     const ms = membershipByUser.get(u.id) ?? null;
     const sub = ms ? computeSubscription(ms, attendanceByUser.get(u.id) ?? [], today) : null;
     return {
-      user: u,
+      user: {
+        id: u.id,
+        code: u.code,
+        name: u.name,
+        email: u.email,
+        avatarHue: u.avatarHue,
+      },
       membership: ms,
-      sub,
+      sub: sub
+        ? {
+            active: sub.active,
+            remaining: sub.remaining,
+            totalDays: sub.totalDays,
+            pct: sub.pct,
+            endDate: prettyDate(sub.endDate),
+            absent: sub.absent,
+          }
+        : null,
       coachId: coachByMember.get(u.id) ?? null,
     };
   });
@@ -195,99 +211,20 @@ export default async function AdminPage() {
         </Card>
       </div>
 
-      {/* Members + coach assignment */}
+      {/* Members directory with live User ID search & filtering */}
       <Card className="mt-4">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <h3 className="font-display text-xl tracking-wide uppercase">
-            Members & Coach Assignments
-          </h3>
+          <div>
+            <h3 className="font-display text-xl tracking-wide uppercase">
+              Members Directory
+            </h3>
+            <p className="text-xs text-zinc-500">
+              Search by Member ID (e.g. KCM0001), name, or email. Manage plans, coaches, and access.
+            </p>
+          </div>
           <Chip tone="zinc">{activeRows.length} active</Chip>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[820px] text-sm">
-            <thead>
-              <tr className="border-b border-line text-left text-[10px] font-semibold tracking-[0.2em] text-zinc-500 uppercase">
-                <th className="py-2.5 pr-4">Member</th>
-                <th className="py-2.5 pr-4">Plan</th>
-                <th className="py-2.5 pr-4">Progress</th>
-                <th className="py-2.5 pr-4">Adjusted end</th>
-                <th className="py-2.5 pr-4">Coach</th>
-                <th className="py-2.5">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => (
-                <tr key={r.user.id} className="border-b border-line/60 align-middle">
-                  <td className="py-3 pr-4">
-                    <div className="flex items-center gap-3">
-                      <Avatar name={r.user.name} hue={r.user.avatarHue} size={34} />
-                      <div>
-                        <p className="font-medium text-zinc-100">{r.user.name}</p>
-                        <p className="text-xs text-zinc-500">{r.user.email}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="py-3 pr-4">
-                    {r.membership ? (
-                      <Chip tone={r.membership.plan === "pt" ? "blue" : "volt"}>
-                        {r.membership.plan === "pt" ? "PT" : "Normal"}
-                      </Chip>
-                    ) : (
-                      <Chip tone="zinc">—</Chip>
-                    )}
-                  </td>
-                  <td className="py-3 pr-4">
-                    {r.sub ? (
-                      <div className="w-36">
-                        <p className="mb-1 text-xs text-zinc-400">
-                          <span className="font-semibold text-zinc-200">{r.sub.remaining}</span>
-                          {" / "}
-                          {r.sub.totalDays} left
-                        </p>
-                        <div className="h-1.5 overflow-hidden rounded-full bg-smoke">
-                          <div
-                            className={`h-full rounded-full ${r.sub.active ? "bg-volt" : "bg-zinc-600"}`}
-                            style={{ width: `${r.sub.pct}%` }}
-                          />
-                        </div>
-                      </div>
-                    ) : (
-                      <span className="text-xs text-zinc-600">no plan</span>
-                    )}
-                  </td>
-                  <td className="py-3 pr-4 text-xs text-zinc-400">
-                    {r.sub ? (
-                      <>
-                        {prettyDate(r.sub.endDate)}
-                        <span className="ml-1 text-zinc-600">(+{r.sub.absent}d)</span>
-                      </>
-                    ) : (
-                      "—"
-                    )}
-                  </td>
-                  <td className="py-3 pr-4">
-                    {r.membership?.plan === "pt" ? (
-                      <CoachAssigner
-                        memberId={r.user.id}
-                        trainers={trainerOptions}
-                        currentId={r.coachId}
-                      />
-                    ) : (
-                      <span className="text-xs text-zinc-600">not eligible</span>
-                    )}
-                  </td>
-                  <td className="py-3">
-                    <div className="flex items-center gap-1.5">
-                      <RenewForm memberId={r.user.id} />
-                      <ResetPasswordBtn userId={r.user.id} userName={r.user.name} />
-                      <DeleteUserBtn userId={r.user.id} userName={r.user.name} />
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <MembersManager rows={rows} trainers={trainerOptions} />
       </Card>
 
       {/* Coaches Management Section */}
@@ -349,7 +286,19 @@ export default async function AdminPage() {
                         {payment.plan === "pt" ? "PT" : "Normal"}
                       </Chip>
                     </td>
-                    <td className="py-2.5 pr-4 text-xs text-zinc-500">{payment.method}</td>
+                    <td className="py-2.5 pr-4">
+                      <span
+                        className={`inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                          payment.method === "Cash"
+                            ? "border border-emerald-400/30 bg-emerald-400/10 text-emerald-300"
+                            : payment.method === "Card"
+                            ? "border border-purple-400/30 bg-purple-400/10 text-purple-300"
+                            : "border border-sky-400/30 bg-sky-400/10 text-sky-300"
+                        }`}
+                      >
+                        {payment.method}
+                      </span>
+                    </td>
                     <td className="py-2.5 pr-4 text-xs text-zinc-500">
                       {prettyDateTime(payment.createdAt)}
                     </td>

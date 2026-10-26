@@ -19,15 +19,15 @@ export default function LoginForm() {
           htmlFor="email"
           className="mb-2 block text-[10px] font-semibold tracking-[0.25em] text-zinc-500 uppercase"
         >
-          Email address
+          User ID or Email
         </label>
         <input
           id="email"
           name="email"
-          type="email"
+          type="text"
           required
-          autoComplete="email"
-          placeholder="your.email@example.com"
+          autoComplete="username"
+          placeholder="e.g. KCM0001 or you@example.com"
           className="w-full rounded-xl border border-line bg-smoke/60 px-4 py-3.5 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-volt focus:outline-none focus:ring-2 focus:ring-volt/20"
         />
       </div>
