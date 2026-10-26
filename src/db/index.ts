@@ -4,7 +4,11 @@ import { Pool } from "pg";
 const DEFAULT_SUPABASE_POOLER =
   "postgresql://postgres.bohgzryjrloywzxxkrlf:Aster%401145%2F@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres";
 
-let databaseUrl = process.env.DATABASE_URL || DEFAULT_SUPABASE_POOLER;
+let databaseUrl =
+  process.env.DATABASE_URL ||
+  process.env.POSTGRES_URL ||
+  process.env.POSTGRES_PRISMA_URL ||
+  DEFAULT_SUPABASE_POOLER;
 
 // If set to direct IPv6 host (which times out on serverless / non-IPv6 networks), rewrite to reliable IPv4 pooler
 if (databaseUrl.includes("db.bohgzryjrloywzxxkrlf.supabase.co:5432")) {
