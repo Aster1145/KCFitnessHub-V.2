@@ -25,6 +25,35 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const members = pgTable("members", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id")
+    .notNull()
+    .unique()
+    .references(() => users.id, { onDelete: "cascade" }),
+  code: text("code").notNull().unique(),
+  name: text("name").notNull(),
+  email: text("email").notNull(),
+  goal: text("goal"),
+  level: text("level"),
+  avatarHue: integer("avatar_hue").default(80),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const coaches = pgTable("coaches", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id")
+    .notNull()
+    .unique()
+    .references(() => users.id, { onDelete: "cascade" }),
+  code: text("code").notNull().unique(),
+  name: text("name").notNull(),
+  email: text("email").notNull(),
+  specialty: text("specialty"),
+  avatarHue: integer("avatar_hue").default(80),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const sessions = pgTable("sessions", {
   token: text("token").primaryKey(),
   userId: integer("user_id")
@@ -170,6 +199,8 @@ export const messages = pgTable("messages", {
 });
 
 export type User = typeof users.$inferSelect;
+export type Member = typeof members.$inferSelect;
+export type Coach = typeof coaches.$inferSelect;
 export type Membership = typeof memberships.$inferSelect;
 export type WorkoutPlan = typeof workoutPlans.$inferSelect;
 export type WorkoutDay = typeof workoutDays.$inferSelect;
