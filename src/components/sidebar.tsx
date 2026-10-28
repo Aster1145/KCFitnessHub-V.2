@@ -67,13 +67,21 @@ export default function Sidebar({
     .join("")
     .toUpperCase();
 
+  // Identify the single most specific matching link for the current pathname
+  const matchingLinks = links.filter((l) => {
+    if (pathname === l.href) return true;
+    // Base portal homes shouldn't greedily match deeper sections
+    if (["/", "/admin", "/member", "/trainer"].includes(l.href)) return false;
+    return pathname.startsWith(l.href + "/");
+  });
+  const bestActiveHref =
+    matchingLinks.sort((a, b) => b.href.length - a.href.length)[0]?.href ?? "";
+
   const nav = (
     <>
       {links.map((l) => {
         const Icon = ICONS[l.icon] || BarChart3;
-        const active =
-          pathname === l.href ||
-          (l.href !== "/" && l.href !== "/admin" && pathname.startsWith(l.href + "/"));
+        const active = l.href === bestActiveHref;
         return (
           <Link
             key={l.href}
@@ -147,9 +155,7 @@ export default function Sidebar({
         <nav className="flex gap-1 overflow-x-auto px-3 pb-2">
           {links.map((l) => {
             const Icon = ICONS[l.icon] || BarChart3;
-            const active =
-              pathname === l.href ||
-              (l.href !== "/" && l.href !== "/admin" && pathname.startsWith(l.href + "/"));
+            const active = l.href === bestActiveHref;
             return (
               <Link
                 key={l.href}

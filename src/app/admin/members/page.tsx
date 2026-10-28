@@ -67,6 +67,7 @@ export default async function MembersPage() {
         avatarHue: u.avatarHue,
         goal: u.goal,
         level: u.level,
+        subscriptionTier: u.subscriptionTier,
         createdAt: prettyDate(u.createdAt),
       },
       membership: ms,

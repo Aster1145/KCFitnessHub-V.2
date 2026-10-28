@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { and, desc, eq, ilike } from "drizzle-orm";
 import { db } from "@/db";
-import { users, workoutVideos, type WorkoutVideo } from "@/db/schema";
+import { users, workoutVideos, messages, payments, type WorkoutVideo } from "@/db/schema";
 import { getSessionUser } from "@/lib/auth";
 
 export type DifficultyLevel = "Beginner" | "Intermediate" | "Advanced";
@@ -227,19 +227,132 @@ export async function deleteWorkoutVideo(videoId: string) {
 }
 
 /**
- * Member upgrade action: upgrades member's subscription_tier to 'PT_LITE' (or 'PT')
+ * Step 1: Member requests PT Lite Upgrade.
+ * Does NOT immediately unlock — sends a formal upgrade request to Admin Inbox.
+ * The tutorial vault unlocks ONLY after Admin confirms payment and approves it.
  */
-export async function upgradeSubscriptionTierAction(tier: "PT_LITE" | "PT") {
+export async function requestPtLiteUpgradeAction() {
   const user = await getSessionUser();
   if (!user || user.role !== "member") {
-    return { ok: false, error: "Only members can upgrade subscription tier." };
+    return { ok: false, error: "Only active members can request PT Lite upgrades." };
+  }
+
+  if (user.subscriptionTier === "PT_LITE" || user.subscriptionTier === "PT") {
+    return { ok: true, alreadyActive: true, tier: user.subscriptionTier };
+  }
+
+  // Find admin user
+  const admins = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.role, "admin"))
+    .limit(1);
+
+  if (!admins.length) {
+    return { ok: false, error: "No administrator found to receive upgrade request." };
+  }
+
+  // Check if an unhandled upgrade request already exists for this member
+  const existingMsg = await db
+    .select()
+    .from(messages)
+    .where(
+      and(
+        eq(messages.fromId, user.id),
+        ilike(messages.body, "PT_LITE_UPGRADE_REQUEST%")
+      )
+    )
+    .limit(1);
+
+  if (!existingMsg.length) {
+    await db.insert(messages).values({
+      fromId: user.id,
+      toId: admins[0].id,
+      body: `PT_LITE_UPGRADE_REQUEST :: ${user.name} (${user.code || "KCM"}) requested PT Lite subscription upgrade (₹999/mo). Email: ${user.email}, Phone: ${user.phone || "N/A"}. Awaiting payment verification.`,
+    });
+  }
+
+  revalidatePath("/admin");
+  revalidatePath("/member/workouts/pt-lite");
+
+  return { ok: true, pending: true };
+}
+
+/**
+ * Step 2: Admin Approves PT Lite Upgrade.
+ * Only ADMIN role can call this.
+ * Activates PT_LITE tier for member, logs the ₹999 payment, and dismisses the inbox request.
+ */
+export async function approvePtLiteUpgradeAction(messageId: number, memberUserId: number) {
+  const admin = await getSessionUser();
+  if (!admin || admin.role !== "admin") {
+    return { ok: false, error: "Unauthorized: Admin privileges required." };
+  }
+
+  // 1. Activate PT_LITE tier on the user
+  await db
+    .update(users)
+    .set({ subscriptionTier: "PT_LITE" })
+    .where(eq(users.id, memberUserId));
+
+  // 2. Record ₹999 payment
+  await db.insert(payments).values({
+    userId: memberUserId,
+    amount: 999,
+    plan: "pt",
+    method: "UPI",
+  });
+
+  // 3. Remove the pending message from inbox
+  if (messageId) {
+    await db.delete(messages).where(eq(messages.id, messageId));
+  }
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/members");
+  revalidatePath("/member");
+  revalidatePath("/member/workouts");
+  revalidatePath("/member/workouts/pt-lite");
+
+  return { ok: true };
+}
+
+/**
+ * Admin Rejects or Dismisses PT Lite Upgrade Request
+ */
+export async function rejectPtLiteUpgradeAction(messageId: number) {
+  const admin = await getSessionUser();
+  if (!admin || admin.role !== "admin") {
+    return { ok: false, error: "Unauthorized: Admin privileges required." };
+  }
+
+  await db.delete(messages).where(eq(messages.id, messageId));
+
+  revalidatePath("/admin");
+  revalidatePath("/member/workouts/pt-lite");
+
+  return { ok: true };
+}
+
+/**
+ * Admin direct tier manager: manually update any member's subscription tier
+ */
+export async function updateMemberSubscriptionTierAction(
+  userId: number,
+  tier: "STANDARD" | "PT_LITE" | "PT"
+) {
+  const admin = await getSessionUser();
+  if (!admin || admin.role !== "admin") {
+    return { ok: false, error: "Unauthorized: Admin privileges required." };
   }
 
   await db
     .update(users)
     .set({ subscriptionTier: tier })
-    .where(eq(users.id, user.id));
+    .where(eq(users.id, userId));
 
+  revalidatePath("/admin");
+  revalidatePath("/admin/members");
   revalidatePath("/member");
   revalidatePath("/member/workouts");
   revalidatePath("/member/workouts/pt-lite");

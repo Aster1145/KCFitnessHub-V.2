@@ -28,6 +28,7 @@ import { PageHead, Card, Stat, Chip, Avatar } from "@/components/ui";
 import { RevenueChart, SplitChart } from "@/components/charts";
 import {
   DismissBtn,
+  ApprovePtLiteBtn,
   ReadOnlyMembersTable,
   ReadOnlyCoachesTable,
 } from "./admin-client";
@@ -107,6 +108,7 @@ export default async function AdminPage() {
         avatarHue: u.avatarHue,
         goal: u.goal,
         level: u.level,
+        subscriptionTier: u.subscriptionTier,
         createdAt: prettyDate(u.createdAt),
       },
       membership: ms,
@@ -416,17 +418,45 @@ export default async function AdminPage() {
             <p className="text-xs text-zinc-500">No pending member or trainer requests.</p>
           ) : (
             <ul className="space-y-2">
-              {requests.slice(0, 4).map((m) => (
-                <li key={m.id} className="flex items-start justify-between gap-3 rounded-xl border border-line bg-carbon p-3">
-                  <div>
-                    <p className="text-xs leading-relaxed text-zinc-300">{m.body.replace(" :: ", " — ")}</p>
-                    <p className="mt-1 text-[10px] text-zinc-600">
-                      {m.fromName} · {prettyDateTime(m.createdAt)}
-                    </p>
-                  </div>
-                  <DismissBtn id={m.id} />
-                </li>
-              ))}
+              {requests.slice(0, 5).map((m) => {
+                const isPtLite = m.body.startsWith("PT_LITE_UPGRADE_REQUEST");
+                return (
+                  <li
+                    key={m.id}
+                    className={`flex flex-col gap-2 rounded-xl border p-3 ${
+                      isPtLite
+                        ? "border-amber-500/40 bg-amber-500/5 shadow-[0_0_15px_rgba(245,158,11,0.05)]"
+                        : "border-line bg-carbon"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        {isPtLite && (
+                          <span className="mb-1.5 inline-flex items-center gap-1 rounded-md border border-amber-400/40 bg-amber-400/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-300">
+                            ⚡ PT Lite Upgrade Request
+                          </span>
+                        )}
+                        <p className="text-xs leading-relaxed text-zinc-300">
+                          {m.body.replace("PT_LITE_UPGRADE_REQUEST :: ", "").replace("UPGRADE_REQUEST :: ", "").replace("COACH_REQUEST :: ", "")}
+                        </p>
+                        <p className="mt-1 text-[10px] text-zinc-500">
+                          {m.fromName} · {prettyDateTime(m.createdAt)}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {isPtLite && (
+                          <ApprovePtLiteBtn
+                            messageId={m.id}
+                            memberUserId={m.fromId}
+                            memberName={m.fromName}
+                          />
+                        )}
+                        <DismissBtn id={m.id} />
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </Card>

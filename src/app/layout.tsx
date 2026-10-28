@@ -7,11 +7,13 @@ const anton = Anton({
   weight: "400",
   subsets: ["latin"],
   variable: "--font-anton",
+  display: "swap",
 });
 
 const space = Space_Grotesk({
   subsets: ["latin"],
   variable: "--font-space",
+  display: "swap",
 });
 
 export const metadata: Metadata = {

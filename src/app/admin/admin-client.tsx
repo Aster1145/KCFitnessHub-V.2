@@ -48,6 +48,10 @@ import {
   renewMembershipAction,
   updateUserPasswordAction,
 } from "@/actions/admin";
+import {
+  approvePtLiteUpgradeAction,
+  updateMemberSubscriptionTierAction,
+} from "@/actions/videos";
 import { Avatar, Chip } from "@/components/ui";
 
 const inputCls =
@@ -63,6 +67,7 @@ export type MemberRowData = {
     avatarHue: number;
     goal?: string | null;
     level?: string | null;
+    subscriptionTier?: string | null;
     createdAt?: string | null;
   };
   membership: {
@@ -1083,6 +1088,51 @@ export function DismissBtn({ id }: { id: number }) {
   );
 }
 
+export function ApprovePtLiteBtn({
+  messageId,
+  memberUserId,
+  memberName,
+}: {
+  messageId: number;
+  memberUserId: number;
+  memberName: string;
+}) {
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  return (
+    <button
+      disabled={pending}
+      onClick={() =>
+        start(async () => {
+          if (
+            !confirm(
+              `Confirm payment of ₹999 received and activate PT Lite access for ${memberName}?`
+            )
+          )
+            return;
+          const res = await approvePtLiteUpgradeAction(messageId, memberUserId);
+          if (res.ok) {
+            router.refresh();
+          } else {
+            alert(res.error || "Failed to approve PT Lite.");
+          }
+        })
+      }
+      className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-emerald-500/40 bg-emerald-500/20 px-2.5 py-1 text-xs font-bold text-emerald-300 transition-all hover:bg-emerald-500 hover:text-carbon disabled:opacity-50 cursor-pointer"
+      title="Confirm Payment & Activate PT Lite"
+    >
+      {pending ? (
+        <LoaderCircle size={12} className="animate-spin" />
+      ) : (
+        <>
+          <CheckCircle2 size={12} />
+          Approve PT Lite (₹999)
+        </>
+      )}
+    </button>
+  );
+}
+
 export function RenewForm({ memberId }: { memberId: number }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -1209,6 +1259,73 @@ export function RenewForm({ memberId }: { memberId: number }) {
           </button>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+export function AdminTierToggleBtn({
+  userId,
+  memberName,
+  currentTier,
+}: {
+  userId: number;
+  memberName: string;
+  currentTier: string;
+}) {
+  const router = useRouter();
+  const [pending, start] = useTransition();
+
+  const handleSetTier = (tier: "STANDARD" | "PT_LITE" | "PT") => {
+    if (tier === currentTier) return;
+    if (!confirm(`Update subscription tier for ${memberName} to ${tier}?`)) return;
+    start(async () => {
+      const res = await updateMemberSubscriptionTierAction(userId, tier);
+      if (res.ok) {
+        router.refresh();
+      } else {
+        alert(res.error || "Failed to update tier");
+      }
+    });
+  };
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 text-xs">
+      <button
+        type="button"
+        disabled={pending || currentTier === "STANDARD"}
+        onClick={() => handleSetTier("STANDARD")}
+        className={`rounded-lg px-2.5 py-1 font-semibold transition-all ${
+          currentTier === "STANDARD"
+            ? "bg-zinc-700 text-white cursor-default"
+            : "border border-line bg-smoke text-zinc-400 hover:text-white"
+        }`}
+      >
+        Standard
+      </button>
+      <button
+        type="button"
+        disabled={pending || currentTier === "PT_LITE"}
+        onClick={() => handleSetTier("PT_LITE")}
+        className={`rounded-lg px-2.5 py-1 font-semibold transition-all ${
+          currentTier === "PT_LITE"
+            ? "bg-volt text-carbon shadow cursor-default"
+            : "border border-volt/30 bg-volt/10 text-volt hover:bg-volt/20"
+        }`}
+      >
+        PT Lite (Approve)
+      </button>
+      <button
+        type="button"
+        disabled={pending || currentTier === "PT"}
+        onClick={() => handleSetTier("PT")}
+        className={`rounded-lg px-2.5 py-1 font-semibold transition-all ${
+          currentTier === "PT"
+            ? "bg-amber-400 text-carbon shadow cursor-default"
+            : "border border-amber-400/30 bg-amber-400/10 text-amber-300 hover:bg-amber-400/20"
+        }`}
+      >
+        Full PT VIP
+      </button>
     </div>
   );
 }
@@ -1447,6 +1564,33 @@ export function MemberDetailModal({
                 General gym access. Upgrading to Personal Training enables coach assignment.
               </p>
             )}
+          </div>
+
+          {/* Subscription Tier & Video Vault Access */}
+          <div className="rounded-xl border border-line bg-carbon/70 p-3.5">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] font-semibold tracking-widest uppercase text-zinc-400 flex items-center gap-1.5">
+                <Zap size={12} className="text-volt" /> Subscription Tier (Video Vault)
+              </span>
+              <span
+                className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                  member.user.subscriptionTier === "PT"
+                    ? "bg-amber-400/20 text-amber-300 border border-amber-400/40"
+                    : member.user.subscriptionTier === "PT_LITE"
+                    ? "bg-volt/20 text-volt border border-volt/40"
+                    : "bg-zinc-700/50 text-zinc-300 border border-zinc-600"
+                }`}
+              >
+                {member.user.subscriptionTier || "STANDARD"}
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              <AdminTierToggleBtn
+                userId={member.user.id}
+                memberName={member.user.name}
+                currentTier={member.user.subscriptionTier || "STANDARD"}
+              />
+            </div>
           </div>
         </div>
 

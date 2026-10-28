@@ -20,7 +20,7 @@ import {
   Award,
 } from "lucide-react";
 import {
-  upgradeSubscriptionTierAction,
+  requestPtLiteUpgradeAction,
   type VideoWithCoach,
   type DifficultyLevel,
   type BodyGoal,
@@ -40,6 +40,7 @@ interface PtLiteHubProps {
   memberName: string;
   memberGoal?: string | null;
   memberLevel?: string | null;
+  isPendingApproval?: boolean;
   videos: VideoWithCoach[];
 }
 
@@ -48,9 +49,11 @@ export default function PtLiteHub({
   memberName,
   memberGoal,
   memberLevel,
+  isPendingApproval = false,
   videos,
 }: PtLiteHubProps) {
   const [currentTier, setCurrentTier] = useState<string>(initialTier);
+  const [pendingApproval, setPendingApproval] = useState<boolean>(isPendingApproval);
   const [isPending, startTransition] = useTransition();
 
   // Active filters
@@ -63,14 +66,18 @@ export default function PtLiteHub({
 
   const isUnlocked = currentTier === "PT_LITE" || currentTier === "PT";
 
-  // Handle Upgrade to PT Lite
-  const handleUpgrade = (tier: "PT_LITE" | "PT" = "PT_LITE") => {
+  // Handle requesting PT Lite upgrade (requires Admin approval)
+  const handleRequestUpgrade = () => {
     startTransition(async () => {
-      const res = await upgradeSubscriptionTierAction(tier);
+      const res = await requestPtLiteUpgradeAction();
       if (res.ok) {
-        setCurrentTier(tier);
+        if ("alreadyActive" in res && res.alreadyActive) {
+          setCurrentTier(res.tier || "PT_LITE");
+        } else {
+          setPendingApproval(true);
+        }
       } else {
-        alert(res.error || "Failed to upgrade subscription.");
+        alert(res.error || "Failed to submit upgrade request.");
       }
     });
   };
@@ -140,42 +147,60 @@ export default function PtLiteHub({
               rep cues, and goal-specific split variations.
             </p>
 
-            {/* Pricing Comparison & CTAs */}
-            <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center">
-              <button
-                type="button"
-                onClick={() => handleUpgrade("PT_LITE")}
-                disabled={isPending}
-                className="group flex items-center justify-center gap-2.5 rounded-2xl bg-volt px-6 py-4 font-display text-base font-bold uppercase tracking-wider text-carbon shadow-lg shadow-volt/20 transition-all hover:bg-volt/90 hover:scale-[1.02] disabled:opacity-50"
-              >
-                {isPending ? (
-                  <span className="flex items-center gap-2">
-                    <span className="size-4 animate-spin rounded-full border-2 border-carbon border-t-transparent" />
-                    Activating PT Lite...
+            {/* Pricing Comparison & CTAs or Pending State */}
+            {pendingApproval ? (
+              <div className="mt-8 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-5 backdrop-blur-sm shadow-lg">
+                <div className="flex items-start gap-3.5">
+                  <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-amber-500 text-carbon shadow">
+                    <Clock size={22} className="animate-pulse" />
                   </span>
-                ) : (
-                  <>
-                    <Zap size={18} className="fill-carbon" />
-                    Upgrade to PT Lite · ₹999/mo
-                    <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
-                  </>
-                )}
-              </button>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="font-display text-lg tracking-wide uppercase text-amber-300">
+                        Upgrade Request Pending Admin Approval
+                      </h3>
+                      <span className="rounded-full bg-amber-500/20 border border-amber-400/40 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-300">
+                        Awaiting Payment Verification
+                      </span>
+                    </div>
+                    <p className="mt-1.5 text-xs sm:text-sm leading-relaxed text-amber-100/80">
+                      Your request to upgrade to <strong>PT Lite (₹999/mo)</strong> has been submitted to KC Fitness Hub management. 
+                      Once admin confirms your payment via UPI, Cash, or Card, your access to the tutorial coaching vault will unlock automatically.
+                    </p>
+                    <div className="mt-3 flex items-center gap-2 text-xs font-semibold text-amber-400">
+                      <span className="size-2 rounded-full bg-amber-400 animate-ping" />
+                      Status: Request logged in Admin Control Room.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center">
+                <button
+                  type="button"
+                  onClick={handleRequestUpgrade}
+                  disabled={isPending}
+                  className="group flex items-center justify-center gap-2.5 rounded-2xl bg-volt px-6 py-4 font-display text-base font-bold uppercase tracking-wider text-carbon shadow-lg shadow-volt/20 transition-all hover:bg-volt/90 hover:scale-[1.02] disabled:opacity-50 cursor-pointer"
+                >
+                  {isPending ? (
+                    <span className="flex items-center gap-2">
+                      <span className="size-4 animate-spin rounded-full border-2 border-carbon border-t-transparent" />
+                      Submitting Request...
+                    </span>
+                  ) : (
+                    <>
+                      <Zap size={18} className="fill-carbon" />
+                      Request PT Lite Upgrade · ₹999/mo
+                      <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
+                    </>
+                  )}
+                </button>
 
-              <button
-                type="button"
-                onClick={() => handleUpgrade("PT")}
-                disabled={isPending}
-                className="flex items-center justify-center gap-2 rounded-2xl border border-line bg-smoke/80 px-5 py-4 text-sm font-semibold text-zinc-300 transition-colors hover:bg-smoke hover:text-zinc-100"
-              >
-                <Crown size={16} className="text-amber-400" />
-                Or Full 1-on-1 PT (₹4,999/mo)
-              </button>
-            </div>
-
-            <p className="mt-3 text-xs text-zinc-500">
-              * Instant activation · Cancel anytime from member settings.
-            </p>
+                <p className="text-xs text-zinc-400 sm:max-w-xs">
+                  * Admin will verify payment (UPI / Cash / Card) and activate your PT Lite subscription.
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -275,13 +300,25 @@ export default function PtLiteHub({
                     </span>
                   </div>
                   <h3 className="font-display text-base text-zinc-200">{v.title}</h3>
-                  <button
-                    type="button"
-                    onClick={() => handleUpgrade("PT_LITE")}
-                    className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl border border-volt/30 bg-volt/10 py-2 text-xs font-semibold text-volt hover:bg-volt hover:text-carbon transition-colors"
-                  >
-                    Unlock with PT Lite
-                  </button>
+                  {pendingApproval ? (
+                    <button
+                      type="button"
+                      disabled
+                      className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl border border-amber-500/30 bg-amber-500/10 py-2 text-xs font-semibold text-amber-300 opacity-80"
+                    >
+                      <Clock size={12} className="animate-pulse" />
+                      Pending Admin Approval
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleRequestUpgrade}
+                      disabled={isPending}
+                      className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl border border-volt/30 bg-volt/10 py-2 text-xs font-semibold text-volt hover:bg-volt hover:text-carbon transition-colors cursor-pointer"
+                    >
+                      Request PT Lite (₹999/mo)
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
