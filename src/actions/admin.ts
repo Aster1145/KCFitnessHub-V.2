@@ -546,3 +546,66 @@ export async function dismissMessageAction(id: number) {
   revalidatePath("/admin");
   return { ok: true };
 }
+
+/**
+ * Re-generates a secure password and emails the login credentials
+ * (Member ID, Email, Password, Login link) to the member.
+ */
+export async function resendMemberCredentialsAction(userId: number) {
+  await requireAdmin();
+
+  const [user] = await db
+    .select()
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+
+  if (!user) {
+    return { ok: false, error: "Member not found" };
+  }
+
+  // Get latest membership info
+  const [membership] = await db
+    .select()
+    .from(memberships)
+    .where(eq(memberships.userId, userId))
+    .orderBy(desc(memberships.id))
+    .limit(1);
+
+  // Auto-generate fresh secure password
+  const newPassword = `KC${Math.floor(100000 + Math.random() * 900000)}`;
+  await db
+    .update(users)
+    .set({ passwordHash: hashPassword(newPassword) })
+    .where(eq(users.id, userId));
+
+  const planName = membership
+    ? `${membership.durationDays} Days (${membership.plan === "pt" ? "Personal Training" : "General Fitness"})`
+    : "Active Member Access";
+
+  const memberCode = user.code || `KCM${String(user.id).padStart(4, "0")}`;
+
+  // Send the credentials email
+  const emailRes = await sendWelcomeEmail({
+    toEmail: user.email,
+    toName: user.name,
+    memberCode,
+    password: newPassword,
+    planName,
+    startDate: membership?.startDate || todayStr(),
+    phone: user.phone,
+  });
+
+  revalidatePath("/admin/members");
+  return {
+    ok: true,
+    code: memberCode,
+    email: user.email,
+    name: user.name,
+    password: newPassword,
+    phone: user.phone,
+    emailSent: emailRes.success,
+    simulated: emailRes.simulated,
+  };
+}
+

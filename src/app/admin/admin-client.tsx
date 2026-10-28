@@ -46,6 +46,7 @@ import {
   dismissMessageAction,
   rejectPendingMemberAction,
   renewMembershipAction,
+  resendMemberCredentialsAction,
   updateUserPasswordAction,
 } from "@/actions/admin";
 import {
@@ -335,6 +336,13 @@ export function MembersManager({
                       <Eye size={12} />
                       <span className="hidden sm:inline">Card</span>
                     </button>
+                    <ShareCredentialsBtn
+                      userId={r.user.id}
+                      userName={r.user.name}
+                      userEmail={r.user.email}
+                      userPhone={r.user.phone}
+                      userCode={r.user.code}
+                    />
                     <RenewForm memberId={r.user.id} />
                     <ResetPasswordBtn userId={r.user.id} userName={r.user.name} />
                     <DeleteUserBtn userId={r.user.id} userName={r.user.name} />
@@ -973,6 +981,187 @@ export function ResetPasswordBtn({
   );
 }
 
+export function ShareCredentialsBtn({
+  userId,
+  userName,
+  userEmail,
+  userPhone,
+  userCode,
+}: {
+  userId: number;
+  userName: string;
+  userEmail: string;
+  userPhone?: string | null;
+  userCode?: string | null;
+}) {
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<{
+    code: string;
+    password: string;
+    email: string;
+    emailSent: boolean;
+    simulated?: boolean;
+  } | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [err, setErr] = useState("");
+
+  const handleShare = async (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    setLoading(true);
+    setErr("");
+    try {
+      const res = await resendMemberCredentialsAction(userId);
+      if (res.ok && res.password) {
+        setResult({
+          code: res.code,
+          password: res.password,
+          email: res.email,
+          emailSent: !!res.emailSent,
+          simulated: res.simulated,
+        });
+      } else {
+        setErr(res.error || "Failed to generate credentials");
+      }
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : "Error sending credentials");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const copyCreds = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    if (!result) return;
+    const loginUrl = (typeof window !== "undefined" ? window.location.origin : "https://kcfitnesshub.com") + "/login";
+    const text = `Welcome to KC Fitness Hub!\n\nHere are your member login credentials:\n• Member ID: ${result.code}\n• Registered Email: ${result.email}\n• Password: ${result.password}\n\nSign in here: ${loginUrl}\n(You can log in using either your Member ID or Email)`;
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const cleanPhone = userPhone?.replace(/[^0-9]/g, "");
+  const loginUrl = typeof window !== "undefined" ? window.location.origin + "/login" : "https://kcfitnesshub.com/login";
+  const waText = result
+    ? encodeURIComponent(
+        `Hello ${userName}! Welcome to KC Fitness Hub 💪\n\nYour member credentials are:\n• Member ID: ${result.code}\n• Email: ${result.email}\n• Password: ${result.password}\n\nLogin portal: ${loginUrl}`
+      )
+    : "";
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={handleShare}
+        disabled={loading}
+        className="flex items-center gap-1 rounded-lg border border-volt/40 bg-volt/10 px-2 py-1.5 text-xs font-medium text-volt hover:bg-volt hover:text-carbon transition-colors disabled:opacity-50"
+        title="Email auto-generated ID & password to member"
+      >
+        {loading ? (
+          <LoaderCircle size={12} className="animate-spin" />
+        ) : (
+          <Mail size={12} />
+        )}
+        <span className="hidden sm:inline">Credentials</span>
+      </button>
+
+      {/* Result Modal / Popup */}
+      {result && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm animate-in fade-in duration-150 text-left"
+          onClick={(e) => {
+            e.stopPropagation();
+            setResult(null);
+          }}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl border border-volt/40 bg-[#121418] p-6 shadow-2xl space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-line pb-3">
+              <div className="flex items-center gap-2.5">
+                <span className="grid size-9 place-items-center rounded-xl bg-volt text-carbon font-bold">
+                  <Mail size={16} />
+                </span>
+                <div>
+                  <h3 className="font-display text-lg tracking-wide uppercase text-zinc-100">
+                    Credentials Dispatched
+                  </h3>
+                  <p className="text-[11px] text-zinc-400">
+                    Auto-generated login details for {userName}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setResult(null)}
+                className="grid size-7 place-items-center rounded-lg border border-line bg-smoke/60 text-zinc-400 hover:text-zinc-100"
+              >
+                <X size={14} />
+              </button>
+            </div>
+
+            <div className="rounded-xl border border-line/80 bg-carbon/80 p-4 space-y-2.5 font-mono text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-zinc-500 font-sans text-xs">Member ID:</span>
+                <span className="font-bold text-volt text-sm">{result.code}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-zinc-500 font-sans text-xs">Registered Email:</span>
+                <span className="text-zinc-200">{result.email}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-zinc-500 font-sans text-xs">Auto Password:</span>
+                <span className="rounded bg-smoke px-2.5 py-1 font-bold text-white tracking-widest text-sm border border-line">
+                  {result.password}
+                </span>
+              </div>
+              <div className="flex items-center justify-between pt-2 border-t border-line/50">
+                <span className="text-zinc-500 font-sans text-[11px]">Email Dispatch:</span>
+                <span className={`text-[11px] font-sans font-semibold ${result.emailSent ? "text-emerald-400" : "text-amber-400"}`}>
+                  {result.emailSent ? "✓ Sent to Inbox" : "✓ Generated (Simulated)"}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2 pt-1">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={copyCreds}
+                  className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-volt py-2.5 text-xs font-bold uppercase tracking-wider text-carbon hover:bg-volt-dim transition-all shadow-md active:scale-98"
+                >
+                  {copied ? <Check size={14} /> : <Copy size={14} />}
+                  {copied ? "Copied to Clipboard!" : "Copy Credentials"}
+                </button>
+
+                {cleanPhone && (
+                  <a
+                    href={`https://wa.me/${cleanPhone}?text=${waText}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-2.5 text-xs font-bold text-emerald-400 hover:bg-emerald-500 hover:text-carbon transition-all"
+                  >
+                    <MessageCircle size={14} />
+                    WhatsApp
+                  </a>
+                )}
+              </div>
+
+              <p className="text-[10px] text-zinc-500 text-center">
+                Member can sign in using either Member ID or Email with this password.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {err && (
+        <span className="text-[11px] text-red-400 block mt-1">{err}</span>
+      )}
+    </>
+  );
+}
+
 export function DeleteUserBtn({
   userId,
   userName,
@@ -1597,6 +1786,13 @@ export function MemberDetailModal({
         {/* Modal Actions Footer */}
         <div className="mt-6 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-4">
           <div className="flex items-center gap-2">
+            <ShareCredentialsBtn
+              userId={member.user.id}
+              userName={member.user.name}
+              userEmail={member.user.email}
+              userPhone={member.user.phone}
+              userCode={member.user.code}
+            />
             <RenewForm memberId={member.user.id} />
             <ResetPasswordBtn userId={member.user.id} userName={member.user.name} />
             <DeleteUserBtn userId={member.user.id} userName={member.user.name} />
