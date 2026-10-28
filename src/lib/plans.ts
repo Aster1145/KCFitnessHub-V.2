@@ -110,6 +110,8 @@ export interface AiRequest {
   daysPerWeek: number;
   equipment: string;
   notes?: string;
+  adjustmentPrompt?: string;
+  currentPlan?: PlanInput;
 }
 
 const SPLITS: Record<number, { label: string; focus: string }[]> = {

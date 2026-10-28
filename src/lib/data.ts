@@ -13,6 +13,7 @@ import {
   workoutDays,
   workoutPlans,
   pendingMembers,
+  exerciseCompletions,
   type DietAssignment,
   type DietLog,
   type Message,
@@ -133,6 +134,39 @@ export async function getActivePlan(userId: number): Promise<FullPlan | null> {
     })),
     coachName,
   };
+}
+
+export async function getCompletedExerciseIdsForUser(
+  userId: number,
+  date: string = todayStr()
+): Promise<number[]> {
+  const rows = await db
+    .select({ exerciseId: exerciseCompletions.exerciseId })
+    .from(exerciseCompletions)
+    .where(
+      and(
+        eq(exerciseCompletions.userId, userId),
+        eq(exerciseCompletions.date, date),
+        eq(exerciseCompletions.completed, true)
+      )
+    );
+  return rows.map((r) => r.exerciseId);
+}
+
+export async function getAllUserExerciseCompletions(userId: number) {
+  return db
+    .select({
+      id: exerciseCompletions.id,
+      exerciseId: exerciseCompletions.exerciseId,
+      date: exerciseCompletions.date,
+    })
+    .from(exerciseCompletions)
+    .where(
+      and(
+        eq(exerciseCompletions.userId, userId),
+        eq(exerciseCompletions.completed, true)
+      )
+    );
 }
 
 // ---------- Diet ----------

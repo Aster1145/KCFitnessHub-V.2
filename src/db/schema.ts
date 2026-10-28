@@ -151,6 +151,23 @@ export const planExercises = pgTable("plan_exercises", {
   orderIndex: integer("order_index").notNull().default(0),
 });
 
+export const exerciseCompletions = pgTable(
+  "exercise_completions",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    exerciseId: integer("exercise_id")
+      .notNull()
+      .references(() => planExercises.id, { onDelete: "cascade" }),
+    date: date("date", { mode: "string" }).notNull(),
+    completed: boolean("completed").notNull().default(true),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => [unique("exercise_completions_user_ex_date").on(t.userId, t.exerciseId, t.date)]
+);
+
 export const dietLogs = pgTable("diet_logs", {
   id: serial("id").primaryKey(),
   userId: integer("user_id")
@@ -258,3 +275,4 @@ export type Message = typeof messages.$inferSelect;
 export type PendingMember = typeof pendingMembers.$inferSelect;
 export type WorkoutVideo = typeof workoutVideos.$inferSelect;
 export type NewWorkoutVideo = typeof workoutVideos.$inferInsert;
+export type ExerciseCompletion = typeof exerciseCompletions.$inferSelect;

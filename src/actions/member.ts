@@ -9,6 +9,7 @@ import {
   dietLogs,
   messages,
   users,
+  exerciseCompletions,
 } from "@/db/schema";
 import { getSessionUser } from "@/lib/auth";
 import { todayStr } from "@/lib/dates";
@@ -131,4 +132,138 @@ export async function messageCoachAction(body: string) {
   });
   revalidatePath("/member/coach");
   return { ok: true };
+}
+
+/**
+ * Toggle individual exercise checklist completion
+ */
+export async function toggleExerciseCompletionAction(
+  exerciseId: number,
+  targetDate: string = todayStr()
+) {
+  const user = await requireMember();
+
+  const existing = await db
+    .select()
+    .from(exerciseCompletions)
+    .where(
+      and(
+        eq(exerciseCompletions.userId, user.id),
+        eq(exerciseCompletions.exerciseId, exerciseId),
+        eq(exerciseCompletions.date, targetDate)
+      )
+    )
+    .limit(1);
+
+  let isNowCompleted = true;
+
+  if (existing.length > 0) {
+    // Already completed -> toggle off (delete)
+    await db
+      .delete(exerciseCompletions)
+      .where(
+        and(
+          eq(exerciseCompletions.userId, user.id),
+          eq(exerciseCompletions.exerciseId, exerciseId),
+          eq(exerciseCompletions.date, targetDate)
+        )
+      );
+    isNowCompleted = false;
+  } else {
+    // Mark completed
+    await db.insert(exerciseCompletions).values({
+      userId: user.id,
+      exerciseId,
+      date: targetDate,
+      completed: true,
+    });
+
+    // Auto check-in attendance today if not already checked in
+    if (targetDate === todayStr()) {
+      const attendanceRec = await db
+        .select()
+        .from(attendance)
+        .where(
+          and(
+            eq(attendance.userId, user.id),
+            eq(attendance.date, targetDate)
+          )
+        )
+        .limit(1);
+      if (!attendanceRec.length) {
+        await db.insert(attendance).values({ userId: user.id, date: targetDate });
+      }
+    }
+  }
+
+  revalidatePath("/member");
+  revalidatePath("/member/workouts");
+  return { ok: true, completed: isNowCompleted };
+}
+
+/**
+ * Mark all exercises for a workout day as completed
+ */
+export async function batchCompleteExercisesAction(
+  exerciseIds: number[],
+  targetDate: string = todayStr()
+) {
+  const user = await requireMember();
+
+  for (const exId of exerciseIds) {
+    const existing = await db
+      .select()
+      .from(exerciseCompletions)
+      .where(
+        and(
+          eq(exerciseCompletions.userId, user.id),
+          eq(exerciseCompletions.exerciseId, exId),
+          eq(exerciseCompletions.date, targetDate)
+        )
+      )
+      .limit(1);
+
+    if (!existing.length) {
+      await db.insert(exerciseCompletions).values({
+        userId: user.id,
+        exerciseId: exId,
+        date: targetDate,
+        completed: true,
+      });
+    }
+  }
+
+  // Auto check-in attendance today
+  if (targetDate === todayStr()) {
+    const attendanceRec = await db
+      .select()
+      .from(attendance)
+      .where(and(eq(attendance.userId, user.id), eq(attendance.date, targetDate)))
+      .limit(1);
+    if (!attendanceRec.length) {
+      await db.insert(attendance).values({ userId: user.id, date: targetDate });
+    }
+  }
+
+  revalidatePath("/member");
+  revalidatePath("/member/workouts");
+  return { ok: true, count: exerciseIds.length };
+}
+
+/**
+ * Fetch completed exercise IDs for a given date
+ */
+export async function getCompletedExercisesAction(targetDate: string = todayStr()) {
+  const user = await requireMember();
+  const rows = await db
+    .select({ exerciseId: exerciseCompletions.exerciseId })
+    .from(exerciseCompletions)
+    .where(
+      and(
+        eq(exerciseCompletions.userId, user.id),
+        eq(exerciseCompletions.date, targetDate),
+        eq(exerciseCompletions.completed, true)
+      )
+    );
+  return { ok: true, completedIds: rows.map((r) => r.exerciseId) };
 }

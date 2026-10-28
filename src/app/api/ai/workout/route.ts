@@ -24,7 +24,19 @@ function extractJson(text: string): PlanInput | null {
 }
 
 async function callGemini(req: AiRequest, key: string): Promise<PlanInput | null> {
-  const prompt = `You are FORGE Athletics' elite strength & conditioning coach.
+  const prompt = req.adjustmentPrompt && req.currentPlan
+    ? `You are FORGE Athletics' elite strength & conditioning coach.
+The athlete requests an adjustment to their existing workout routine:
+Existing Plan JSON:
+${JSON.stringify(req.currentPlan)}
+
+Athlete's specific change request:
+"${req.adjustmentPrompt}"
+
+Modify the workout plan according to the athlete's request while preserving the overall training logic.
+Respond with ONLY valid JSON (no markdown) in exactly this shape:
+{"title": string, "summary": string, "days": [{"label": string, "focus": string, "exercises": [{"name": string, "sets": string, "reps": string, "rest": string, "notes": string}]}]}`
+    : `You are FORGE Athletics' elite strength & conditioning coach.
 Design a workout plan as STRICT JSON for this athlete:
 - Goal: ${req.goal} (bulk = hypertrophy/muscle gain, cut = fat loss, recomp = body recomposition, strength = maximal strength)
 - Experience level: ${req.level}
@@ -83,6 +95,8 @@ export async function POST(req: Request) {
     daysPerWeek: Math.min(6, Math.max(3, Number(body.daysPerWeek) || 4)),
     equipment: body.equipment || "full gym",
     notes: body.notes,
+    adjustmentPrompt: body.adjustmentPrompt,
+    currentPlan: body.currentPlan,
   };
 
   const key = process.env.GEMINI_API_KEY;
