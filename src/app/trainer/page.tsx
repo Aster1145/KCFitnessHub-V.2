@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { Video } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import {
   getActivePlan,
@@ -87,6 +89,15 @@ export default async function TrainerPage() {
         eyebrow="Trainer Portal"
         title={`Coach ${trainer.name.split(" ")[0]}`}
         sub={`Coach ID: ${trainer.code || "KCC0001"} · ${trainer.specialty || "Fitness Specialist"}${trainer.phone ? ` · 📞 ${trainer.phone}` : ""}`}
+        right={
+          <Link
+            href="/trainer/videos"
+            className="inline-flex items-center gap-2 rounded-xl bg-volt px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-carbon shadow-lg transition-all hover:bg-volt/90"
+          >
+            <Video size={16} />
+            PT Video Studio
+          </Link>
+        }
       />
 
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">

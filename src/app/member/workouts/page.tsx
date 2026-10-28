@@ -1,4 +1,5 @@
-import { Bot, Handshake, PencilRuler } from "lucide-react";
+import Link from "next/link";
+import { Bot, Handshake, PencilRuler, Play, Sparkles, Video } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { getActivePlan } from "@/lib/data";
 import { prettyDateTime } from "@/lib/dates";
@@ -12,6 +13,7 @@ export const dynamic = "force-dynamic";
 export default async function WorkoutsPage() {
   const user = await requireRole("member");
   const full = await getActivePlan(user.id);
+  const isPtMember = user.subscriptionTier === "PT_LITE" || user.subscriptionTier === "PT";
 
   return (
     <div>
@@ -19,7 +21,46 @@ export default async function WorkoutsPage() {
         eyebrow="Training"
         title="Workout Architect"
         sub="Your active program is shown below — build your own, let the AI write one, or receive it straight from your coach."
+        right={
+          <Link
+            href="/member/workouts/pt-lite"
+            className="inline-flex items-center gap-2 rounded-xl bg-volt px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-carbon shadow-lg transition-all hover:bg-volt/90"
+          >
+            <Play size={14} className="fill-carbon" />
+            PT Lite Video Vault
+          </Link>
+        }
       />
+
+      {/* PT Lite Featured Banner */}
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-volt/25 bg-gradient-to-r from-volt/10 via-steel to-steel p-5 shadow-lg">
+        <div className="flex items-center gap-3.5">
+          <span className="grid size-12 place-items-center rounded-xl bg-volt text-carbon shadow">
+            <Video size={22} />
+          </span>
+          <div>
+            <div className="flex items-center gap-2">
+              <h3 className="font-display text-lg tracking-wide uppercase text-zinc-100">
+                PT Lite Video Tutorial Vault
+              </h3>
+              <Chip tone={isPtMember ? "volt" : "blue"}>
+                {isPtMember ? "Subscribed" : "PT Lite Available"}
+              </Chip>
+            </div>
+            <p className="text-xs text-zinc-400">
+              Access certified coach exercise execution tutorials, filtered by your level and body goal.
+            </p>
+          </div>
+        </div>
+
+        <Link
+          href="/member/workouts/pt-lite"
+          className="inline-flex items-center gap-2 rounded-xl border border-volt/40 bg-volt/10 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-volt transition-colors hover:bg-volt hover:text-carbon"
+        >
+          <Sparkles size={14} />
+          {isPtMember ? "Open Video Hub" : "View PT Lite & Upgrade"}
+        </Link>
+      </div>
 
       <div className="space-y-6">
         <Card>

@@ -16,6 +16,8 @@ import {
   RotateCcw,
   CreditCard,
   UserCheck,
+  Video,
+  PlaySquare,
   type LucideIcon,
 } from "lucide-react";
 import { logoutAction } from "@/actions/auth";
@@ -35,6 +37,8 @@ const ICONS: Record<string, LucideIcon> = {
   add: UserPlus,
   renewals: RotateCcw,
   revenue: CreditCard,
+  videos: Video,
+  ptLite: PlaySquare,
 };
 
 export interface NavLink {

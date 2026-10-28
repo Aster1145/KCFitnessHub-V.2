@@ -7,6 +7,7 @@ import {
   timestamp,
   date,
   unique,
+  uuid,
 } from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
@@ -19,6 +20,11 @@ export const users = pgTable("users", {
   role: text("role", { enum: ["admin", "member", "trainer"] })
     .notNull()
     .default("member"),
+  subscriptionTier: text("subscription_tier", {
+    enum: ["STANDARD", "PT_LITE", "PT"],
+  })
+    .notNull()
+    .default("STANDARD"),
   specialty: text("specialty"), // trainers
   goal: text("goal"), // members: bulk | cut | recomp | strength
   level: text("level"), // members: beginner | intermediate | advanced | extreme
@@ -220,6 +226,25 @@ export const pendingMembers = pgTable("pending_members", {
   approvedUserId: integer("approved_user_id").references(() => users.id, { onDelete: "set null" }),
 });
 
+export const workoutVideos = pgTable("workout_videos", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  coachId: integer("coach_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  videoUrl: text("video_url").notNull(),
+  difficultyLevel: text("difficulty_level", {
+    enum: ["Beginner", "Intermediate", "Advanced"],
+  }).notNull(),
+  bodyGoal: text("body_goal", {
+    enum: ["Cut", "Bulk", "Fat Loss", "Body Recomposition"],
+  }).notNull(),
+  description: text("description"),
+  thumbnailUrl: text("thumbnail_url"),
+  duration: text("duration").default("10:00"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export type User = typeof users.$inferSelect;
 export type Member = typeof members.$inferSelect;
 export type Coach = typeof coaches.$inferSelect;
@@ -231,3 +256,5 @@ export type DietLog = typeof dietLogs.$inferSelect;
 export type DietAssignment = typeof dietAssignments.$inferSelect;
 export type Message = typeof messages.$inferSelect;
 export type PendingMember = typeof pendingMembers.$inferSelect;
+export type WorkoutVideo = typeof workoutVideos.$inferSelect;
+export type NewWorkoutVideo = typeof workoutVideos.$inferInsert;

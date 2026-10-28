@@ -14,6 +14,7 @@ export default async function MemberLayout({ children }: { children: ReactNode }
         links={[
           { href: "/member", label: "Dashboard", icon: "dashboard" },
           { href: "/member/workouts", label: "Workouts", icon: "workouts" },
+          { href: "/member/workouts/pt-lite", label: "PT Lite Hub", icon: "ptLite" },
           { href: "/member/learn", label: "Learn", icon: "learn" },
           { href: "/member/diet", label: "Diet", icon: "diet" },
           { href: "/member/coach", label: "My Coach", icon: "coach" },
