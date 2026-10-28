@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   ArrowLeft,
   ArrowRight,
@@ -769,6 +770,42 @@ export default function JoinPage() {
                   </span>
                 </li>
               </ul>
+            </div>
+
+            {/* Real Facility Preview Card */}
+            <div className="rounded-3xl border border-line bg-smoke/60 p-4 backdrop-blur-md">
+              <div className="flex items-center justify-between mb-3 px-1">
+                <p className="text-[11px] font-bold text-zinc-200 uppercase tracking-wider">
+                  Inside Our Facility
+                </p>
+                <span className="text-[10px] font-mono text-volt">Kaggalipura</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="relative aspect-[4/3] overflow-hidden rounded-xl border border-line">
+                  <Image
+                    src="/images/gym/main-floor.jpg"
+                    alt="KC Fitness Hub Olympic power racks"
+                    fill
+                    className="object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-carbon/80 to-transparent" />
+                  <span className="absolute bottom-1.5 left-2 text-[9px] font-semibold text-zinc-200">
+                    Olympic Racks
+                  </span>
+                </div>
+                <div className="relative aspect-[4/3] overflow-hidden rounded-xl border border-line">
+                  <Image
+                    src="/images/gym/free-weights.jpg"
+                    alt="KC Fitness Hub dumbbell bay"
+                    fill
+                    className="object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-carbon/80 to-transparent" />
+                  <span className="absolute bottom-1.5 left-2 text-[9px] font-semibold text-zinc-200">
+                    Dumbbell Bay
+                  </span>
+                </div>
+              </div>
             </div>
 
             <div className="rounded-3xl border border-line bg-smoke/40 p-6 text-xs space-y-3">

@@ -98,8 +98,8 @@ export default function LandingPage() {
       {/* ---------------- HERO ---------------- */}
       <section id="home" className="grain relative flex min-h-[100svh] items-end overflow-hidden scroll-mt-28">
         <Image
-          src="/images/hero.jpg"
-          alt="Athlete training in a dark gym"
+          src="/images/gym/main-floor.jpg"
+          alt="KC Fitness Hub main strength floor"
           fill
           priority
           className="object-cover object-center"
@@ -259,14 +259,14 @@ export default function LandingPage() {
           <Reveal>
             <div className="relative aspect-[4/3] overflow-hidden rounded-3xl border border-line">
               <Image
-                src="/images/coach.jpg"
-                alt="FORGE personal training session"
+                src="/images/gym/cardio-zone.jpg"
+                alt="KC Fitness Hub training floor with athletes"
                 fill
                 className="object-cover transition-transform duration-700 hover:scale-105"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-carbon/70 to-transparent" />
-              <div className="absolute bottom-5 left-5 rounded-full bg-carbon/70 px-4 py-2 text-[10px] font-semibold tracking-[0.3em] uppercase backdrop-blur">
-                Coach Connect — inside the app
+              <div className="absolute bottom-5 left-5 rounded-full bg-carbon/80 px-4 py-2 text-[10px] font-semibold tracking-[0.3em] uppercase backdrop-blur text-volt border border-volt/20">
+                Live Training Floor — KC Fitness Hub
               </div>
             </div>
           </Reveal>
@@ -553,63 +553,154 @@ export default function LandingPage() {
           </Reveal>
 
           <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {/* Photo 1: Main Strength Floor */}
             <Reveal delay={0}>
-              <div className="group relative aspect-video overflow-hidden rounded-2xl border border-line bg-steel">
+              <div className="group relative aspect-[4/3] overflow-hidden rounded-2xl border border-line bg-steel shadow-lg">
                 <Image
-                  src="/images/hero.jpg"
-                  alt="KC Olympic Barbell Zone"
+                  src="/images/gym/main-floor.jpg"
+                  alt="KC Fitness Hub Olympic Power & Squat Floor"
                   fill
-                  className="object-cover transition-transform duration-500 group-hover:scale-105"
+                  className="object-cover transition-transform duration-700 group-hover:scale-105"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-carbon/90 via-carbon/20 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-carbon via-carbon/30 to-transparent opacity-90 transition-opacity group-hover:opacity-80" />
                 <div className="absolute bottom-4 left-4 right-4">
-                  <span className="rounded-full bg-volt/20 px-2.5 py-0.5 text-[9px] font-bold tracking-widest text-volt uppercase">
-                    Free Weights
+                  <span className="rounded-full bg-volt/20 px-2.5 py-0.5 text-[9px] font-bold tracking-widest text-volt uppercase border border-volt/30">
+                    Free Weights & Racks
                   </span>
-                  <h4 className="font-display mt-1 text-lg uppercase text-zinc-100">
-                    Olympic Lifting Zone
+                  <h4 className="font-display mt-1.5 text-lg uppercase text-zinc-100">
+                    Olympic Power & Squat Floor
                   </h4>
+                  <p className="mt-1 text-xs text-zinc-300 line-clamp-2">
+                    Heavy-duty Pro Ultimate power racks, competition barbells, and calibrated bumper plates.
+                  </p>
                 </div>
               </div>
             </Reveal>
 
-            <Reveal delay={0.1}>
-              <div className="group relative aspect-video overflow-hidden rounded-2xl border border-line bg-steel">
+            {/* Photo 2: Free Weights & Dumbbells */}
+            <Reveal delay={0.08}>
+              <div className="group relative aspect-[4/3] overflow-hidden rounded-2xl border border-line bg-steel shadow-lg">
                 <Image
-                  src="/images/coach.jpg"
-                  alt="KC Dedicated Coaching"
+                  src="/images/gym/free-weights.jpg"
+                  alt="KC Fitness Hub Dumbbell & Free Weight Rack"
                   fill
-                  className="object-cover transition-transform duration-500 group-hover:scale-105"
+                  className="object-cover transition-transform duration-700 group-hover:scale-105"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-carbon/90 via-carbon/20 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-carbon via-carbon/30 to-transparent opacity-90 transition-opacity group-hover:opacity-80" />
                 <div className="absolute bottom-4 left-4 right-4">
-                  <span className="rounded-full bg-sky-400/20 px-2.5 py-0.5 text-[9px] font-bold tracking-widest text-sky-300 uppercase">
-                    Coaching
+                  <span className="rounded-full bg-amber-400/20 px-2.5 py-0.5 text-[9px] font-bold tracking-widest text-amber-300 uppercase border border-amber-400/30">
+                    Dumbbell Bay
                   </span>
-                  <h4 className="font-display mt-1 text-lg uppercase text-zinc-100">
-                    1-on-1 Performance Bay
+                  <h4 className="font-display mt-1.5 text-lg uppercase text-zinc-100">
+                    Precision Dumbbell Collection
                   </h4>
+                  <p className="mt-1 text-xs text-zinc-300 line-clamp-2">
+                    Dual-tier heavy polyurethane dumbbells with warm ambient backlighting and wall-to-wall mirrors.
+                  </p>
                 </div>
               </div>
             </Reveal>
 
-            <Reveal delay={0.2}>
-              <div className="group relative aspect-video overflow-hidden rounded-2xl border border-line bg-gradient-to-br from-smoke to-steel p-6">
-                <div className="flex h-full flex-col justify-between">
+            {/* Photo 3: Cardio Suite */}
+            <Reveal delay={0.16}>
+              <div className="group relative aspect-[4/3] overflow-hidden rounded-2xl border border-line bg-steel shadow-lg">
+                <Image
+                  src="/images/gym/cardio-zone.jpg"
+                  alt="KC Fitness Hub Cardio & Treadmill Suite"
+                  fill
+                  className="object-cover transition-transform duration-700 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-carbon via-carbon/30 to-transparent opacity-90 transition-opacity group-hover:opacity-80" />
+                <div className="absolute bottom-4 left-4 right-4">
+                  <span className="rounded-full bg-sky-400/20 px-2.5 py-0.5 text-[9px] font-bold tracking-widest text-sky-300 uppercase border border-sky-400/30">
+                    Cardio & Conditioning
+                  </span>
+                  <h4 className="font-display mt-1.5 text-lg uppercase text-zinc-100">
+                    Sunlit Treadmill Suite
+                  </h4>
+                  <p className="mt-1 text-xs text-zinc-300 line-clamp-2">
+                    Commercial touchscreen treadmills and endurance machines with panoramic floor-to-ceiling windows.
+                  </p>
+                </div>
+              </div>
+            </Reveal>
+
+            {/* Photo 4: Leg Press & Lower Body */}
+            <Reveal delay={0.24}>
+              <div className="group relative aspect-[4/3] overflow-hidden rounded-2xl border border-line bg-steel shadow-lg">
+                <Image
+                  src="/images/gym/leg-press.jpg"
+                  alt="KC Fitness Hub 45 Degree Leg Press Machine"
+                  fill
+                  className="object-cover transition-transform duration-700 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-carbon via-carbon/30 to-transparent opacity-90 transition-opacity group-hover:opacity-80" />
+                <div className="absolute bottom-4 left-4 right-4">
+                  <span className="rounded-full bg-rose-400/20 px-2.5 py-0.5 text-[9px] font-bold tracking-widest text-rose-300 uppercase border border-rose-400/30">
+                    Lower Body Hypertrophy
+                  </span>
+                  <h4 className="font-display mt-1.5 text-lg uppercase text-zinc-100">
+                    Plate-Loaded Leg Complex
+                  </h4>
+                  <p className="mt-1 text-xs text-zinc-300 line-clamp-2">
+                    Heavy 45° incline leg press, seated hamstring curl, and calf isolation stations on industrial terracotta brick.
+                  </p>
+                </div>
+              </div>
+            </Reveal>
+
+            {/* Photo 5: Leverage Machines */}
+            <Reveal delay={0.32}>
+              <div className="group relative aspect-[4/3] overflow-hidden rounded-2xl border border-line bg-steel shadow-lg">
+                <Image
+                  src="/images/gym/leverage-machines.jpg"
+                  alt="KC Fitness Hub Iso-Lateral Leverage Machines"
+                  fill
+                  className="object-cover transition-transform duration-700 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-carbon via-carbon/30 to-transparent opacity-90 transition-opacity group-hover:opacity-80" />
+                <div className="absolute bottom-4 left-4 right-4">
+                  <span className="rounded-full bg-emerald-400/20 px-2.5 py-0.5 text-[9px] font-bold tracking-widest text-emerald-300 uppercase border border-emerald-400/30">
+                    Machine Hypertrophy
+                  </span>
+                  <h4 className="font-display mt-1.5 text-lg uppercase text-zinc-100">
+                    Iso-Lateral Leverage Bay
+                  </h4>
+                  <p className="mt-1 text-xs text-zinc-300 line-clamp-2">
+                    Engineered plate-loaded leverage rows, pull-downs, and expansive training corridors.
+                  </p>
+                </div>
+              </div>
+            </Reveal>
+
+            {/* Photo 6: Interactive Visit Card */}
+            <Reveal delay={0.4}>
+              <div className="group relative aspect-[4/3] overflow-hidden rounded-2xl border border-volt/30 bg-gradient-to-br from-steel via-carbon to-smoke p-6 shadow-xl flex flex-col justify-between">
+                <div>
+                  <span className="rounded-full bg-volt/15 px-2.5 py-0.5 text-[9px] font-bold tracking-widest text-volt uppercase border border-volt/30">
+                    Experience KC in Person
+                  </span>
+                  <h4 className="font-display mt-3 text-2xl uppercase text-zinc-100 leading-tight">
+                    Visit Our Gym in Bengaluru
+                  </h4>
+                  <p className="mt-2 text-xs leading-relaxed text-zinc-400">
+                    Near Brigade Meadows, Kaggalipura, off Kanakapura Main Road. Drop in for a facility walk-through and meet our conditioning team.
+                  </p>
+                </div>
+
+                <div className="mt-4 pt-4 border-t border-line/80 flex items-center justify-between">
                   <div>
-                    <span className="rounded-full bg-volt/15 px-2.5 py-0.5 text-[9px] font-bold tracking-widest text-volt uppercase">
-                      Equipment
-                    </span>
-                    <h4 className="font-display mt-2 text-2xl uppercase text-zinc-100">
-                      Biomechanical Strength
-                    </h4>
-                    <p className="mt-2 text-xs text-zinc-400">
-                      Engineered resistance machines, plate-loaded presses, and functional cables designed for maximum hypertrophic stimulus.
-                    </p>
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">Hours</p>
+                    <p className="font-mono text-xs text-volt font-bold">5:30 AM – 10:00 PM</p>
                   </div>
-                  <div className="flex items-center gap-2 text-xs font-bold text-volt uppercase">
-                    Tour Facilities <ArrowRight size={14} />
-                  </div>
+                  <a
+                    href="https://www.google.com/maps/place/KC+Fitness+Hub/@12.8090244,77.50407,17z/data=!3m1!4b1!4m6!3m5!1s0x3bae6b64d7e8b919:0x89e27cfa4a1da2cb!8m2!3d12.8090244!4d77.50407!16s%2Fg%2F11w2_h0x9w"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 rounded-full bg-volt px-4 py-2 text-xs font-bold uppercase tracking-wider text-carbon transition-transform hover:scale-105 shadow-[0_0_15px_rgba(204,255,0,0.3)]"
+                  >
+                    Maps <ArrowRight size={13} />
+                  </a>
                 </div>
               </div>
             </Reveal>
@@ -647,7 +738,19 @@ export default function LandingPage() {
             </Reveal>
 
             <Reveal delay={0.1}>
-              <div className="rounded-3xl border border-line bg-steel/80 p-8 shadow-2xl">
+              <div className="rounded-3xl border border-line bg-steel/80 p-6 sm:p-8 shadow-2xl">
+                <div className="relative aspect-[16/9] w-full overflow-hidden rounded-2xl border border-line mb-6">
+                  <Image
+                    src="/images/gym/free-weights.jpg"
+                    alt="KC Fitness Hub dumbbell bay and ambient lighting"
+                    fill
+                    className="object-cover"
+                  />
+                  <div className="absolute bottom-3 left-3 rounded-full bg-carbon/80 px-3 py-1 text-[10px] font-mono text-volt backdrop-blur border border-volt/20">
+                    Real Facility • Bengaluru
+                  </div>
+                </div>
+
                 <h3 className="font-display text-2xl tracking-wide uppercase text-zinc-100">
                   Why Athletes Choose KC
                 </h3>

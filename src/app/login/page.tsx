@@ -12,8 +12,8 @@ export default function LoginPage() {
       {/* Brand panel */}
       <div className="grain relative hidden overflow-hidden lg:block">
         <Image
-          src="/images/hero.jpg"
-          alt="KC Fitness Hub atmosphere"
+          src="/images/gym/main-floor.jpg"
+          alt="KC Fitness Hub training floor atmosphere"
           fill
           className="object-cover"
           priority
